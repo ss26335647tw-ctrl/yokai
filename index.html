@@ -36,7 +36,7 @@ h1{margin:0;font-size:24px;line-height:1.15;text-wrap:balance}
 .tag{color:var(--dim);font-size:15px;margin:0}
 .ico{width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--line);border-radius:50%;padding:0}
 .ico svg,.pill svg,.back svg,.say svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.card-top .ico{grid-row:span 2;color:var(--dim)}
+.card-top .ico{color:var(--dim)}
 /* 數據膠囊 */
 .pills{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:20px}
 .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:color-mix(in srgb,var(--panel) 88%,transparent);font-size:14px;color:var(--dim);white-space:nowrap}
@@ -183,8 +183,8 @@ h1{margin:0;font-size:24px;line-height:1.15;text-wrap:balance}
   <div class="card-top">
     <div class="seal"><span>封</span></div>
     <h1>タカラの妖怪封印</h1>
-    <button class="ico" id="muteHome" onclick="toggleMute()" aria-label="聲音開關"></button>
-    <p class="tag">妖怪は待ってくれない。</p>
+    <div style="grid-row:span 2;display:flex;gap:8px"><button class="ico" id="reloadBtn" onclick="hardReload()" aria-label="重新整理，抓最新版" hidden><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg></button><button class="ico" id="muteHome" onclick="toggleMute()" aria-label="聲音開關"></button></div>
+    <p class="tag">妖怪は待ってくれない。<span id="verTag" style="font-family:var(--fm);font-size:12px;opacity:.6"></span></p>
   </div>
   <div class="pills">
     <span class="pill"><svg viewBox="0 0 24 24"><path d="M4 20h16M6 20V9l6-5 6 5v11"/></svg>封印 <b id="st-sealed">0</b></span>
@@ -339,6 +339,9 @@ let JA_VOICE=null;
 function findVoice(){try{const vs=speechSynthesis.getVoices();JA_VOICE=vs.find(v=>/ja[-_]JP/i.test(v.lang))||vs.find(v=>/^ja/i.test(v.lang))||null}catch(e){}}
 try{findVoice();speechSynthesis.onvoiceschanged=findVoice}catch(e){}
 let noJaWarned=false;
+let ZH_VOICE=null;
+function findZh(){try{const vs=speechSynthesis.getVoices();ZH_VOICE=vs.find(v=>/zh[-_]TW/i.test(v.lang))||vs.find(v=>/zh[-_](HK|Hant)/i.test(v.lang))||vs.find(v=>/^zh/i.test(v.lang))||null}catch(e){}}
+function sayZh(text){if(META.mute)return;try{const ss=window.speechSynthesis;if(!ss)return;if(ss.speaking||ss.pending)ss.cancel();ss.resume();if(!ZH_VOICE)findZh();const u=new SpeechSynthesisUtterance(text);u.lang='zh-TW';u.rate=1.1;if(ZH_VOICE)u.voice=ZH_VOICE;ss.speak(u)}catch(e){}}
 function say(text,rate){if(META.mute)return;try{const ss=window.speechSynthesis;if(!ss){if(!noJaWarned){noJaWarned=true;toast('這個瀏覽器不支援發音')}return}
   if(ss.speaking||ss.pending)ss.cancel();ss.resume();const u=new SpeechSynthesisUtterance(text);u.lang='ja-JP';u.rate=rate||.85;u.volume=1;if(!JA_VOICE)findVoice();if(JA_VOICE)u.voice=JA_VOICE;ss.speak(u);
   if(!JA_VOICE&&ss.getVoices().length&&!noJaWarned){noJaWarned=true;toast('找不到日文語音，請到手機設定加入日文')}}catch(e){}}
@@ -599,7 +602,7 @@ function match(a,b){const ra=a.el.getBoundingClientRect(),rb=b?b.el.getBoundingC
   g.animate([{transform:`translate(${mx}px,${my}px) scale(.2)`,opacity:0},{transform:`translate(${mx}px,${my}px) scale(1.4)`,opacity:1,offset:.3},{transform:`translate(${t.left}px,${t.top-10}px) scale(.5)`,opacity:.9}],{duration:950,easing:'cubic-bezier(0.22,1,0.36,1)'}).onfinish=()=>{g.remove();document.getElementById('l-gems').animate([{transform:'scale(1)'},{transform:'scale(1.35)'},{transform:'scale(1)'}],{duration:300})}}
 /* ===== 語音消方塊（自架網頁用 Safari 開才會有；Claude 裡麥克風被擋就改回用點的） ===== */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-const vc={on:false,rec:null,want:'ja',pick:null,pickT:0,denied:false};
+const vc={on:false,rec:null,want:'ja',pick:null,pickT:0,denied:false,cuts:{}};
 const kata2hira=t=>t.replace(/[\u30a1-\u30f6]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60));
 const normJa=t=>kata2hira(t.normalize('NFKC')).replace(/[\s、。．，,.!！?？「」『』・〜ー]/g,'');
 const normZh=t=>t.normalize('NFKC').replace(/[\s、。．，,.!！?？「」（）()]/g,'');
@@ -611,15 +614,15 @@ function showHeard(t,final){if(!t)return;const fb=document.getElementById('l-fb'
 function voiceStart(){if(!SR||vc.denied)return false;vc.on=true;vc.want='ja';vc.pick=null;listen();voiceUi();return true}
 function voiceStop(){vc.on=false;try{vc.rec&&vc.rec.abort()}catch(e){}vc.rec=null;voiceUi()}
 function listen(){if(!vc.on||lv.over||lv.paused||vc.rec)return;let r;try{r=new SR()}catch(e){vc.on=false;voiceUi();return}vc.rec=r;
-  r.lang=vc.want==='zh'?'zh-TW':'ja-JP';r.interimResults=true;r.continuous=false;r.maxAlternatives=3;
-  r.onresult=e=>{const res=e.results[e.results.length-1];const alts=[...res].map(a=>a.transcript);showHeard(alts[0],res.isFinal);if(tryVoice(alts,res.isFinal)){try{r.abort()}catch(_){}}};
+  vc.cuts={};r.lang='ja-JP';r.interimResults=true;r.continuous=true;r.maxAlternatives=3;
+  r.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){const res=e.results[i],full=res[0].transcript,cut=vc.cuts[i]||0,t=full.slice(cut);if(!t.trim())continue;showHeard(t,res.isFinal);if(tryVoice([t],res.isFinal))vc.cuts[i]=full.length}};
   r.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'||e.error==='audio-capture'){vc.denied=true;vc.on=false;voiceUi();const fb=document.getElementById('l-fb');fb.className='feedback';fb.textContent='麥克風沒開，這次改用點的：先點一塊，再點它的另一半'}};
   r.onend=()=>{if(vc.rec===r)vc.rec=null;if(vc.on&&!lv.over&&!lv.paused)listen()};
   try{r.start()}catch(e){vc.rec=null;setTimeout(listen,400)}voiceUi()}
 function setWant(w){if(vc.want===w&&w==='ja'&&!vc.pick){voiceUi();return}vc.want=w;if(w==='ja'){if(vc.pick&&vc.pick.alive)vc.pick.el.classList.remove('sel');vc.pick=null;lv.sel=null}voiceUi();try{vc.rec&&vc.rec.abort()}catch(e){}}
 function tryVoice(alts,final){if(lv.paused||lv.over)return false;const fb=document.getElementById('l-fb');
   if(vc.want==='ja'){let best=null,bs=0;for(const b of lv.blocks){if(!b.alive||b.type!=='ja')continue;for(const a of alts){const x=normJa(a),sc=Math.max(sim(x,normJa(b.p.j)),sim(x,normJa(b.p.r)));if(sc>bs){bs=sc;best=b}}}
-    if(best&&bs>=(final?.6:.72)){const partner=lv.blocks.find(x=>x.alive&&x.type==='zh'&&x.uid===best.uid);if(!partner)lv.bag=lv.bag.filter(h=>h.uid!==best.uid);vc.pick=null;match(best,partner||null);try{vc.rec&&vc.rec.abort()}catch(_){}return true}
+    if(best&&bs>=(final?.6:.72)){const partner=lv.blocks.find(x=>x.alive&&x.type==='zh'&&x.uid===best.uid);if(!partner)lv.bag=lv.bag.filter(h=>h.uid!==best.uid);vc.pick=null;match(best,partner||null);sayZh(best.p.m);return true}
     if(final){fb.className='feedback no';fb.textContent=`「${alts[0]}」不在畫面上，再看一次方塊`}return false}
   const b=vc.pick;if(!b||!b.alive){setWant('ja');return true}
   let bs=0;for(const a of alts)bs=Math.max(bs,sim(normZh(a),normZh(b.p.m)));
@@ -677,6 +680,10 @@ function verbPick(btn,ans){if(vb.done)return;vb.done=true;cancelAnimationFrame(v
 function verbNext(){vb.i++;if(vb.i>=vb.q.length){showResult({big:'化',title:'化け術おしまい',sub:`${vb.score} 分。`,l1:'得分',v1:vb.score,l2:'題數',v2:10,v3:vb.best,again:startVerb});return}verbShow()}
 function leaveVerb(){cancelAnimationFrame(vb.raf);go('s-home')}
 
+/* ===== 版本與重新整理（只在自架網站顯示） ===== */
+const APP_VER='2026.11.08';
+function hardReload(){toast('抓最新版中…');setTimeout(()=>{try{location.replace(location.pathname+'?v='+Date.now())}catch(e){location.reload()}},250)}
+if(/github\.io$/.test(location.hostname)){document.getElementById('reloadBtn').hidden=false;document.getElementById('verTag').textContent='　v'+APP_VER}
 /* ===== 啟動 ===== */
 load();paintMute();refreshHome();
 document.addEventListener('visibilitychange',()=>{if(document.hidden){if(document.getElementById('s-lava').classList.contains('on')&&!lv.paused&&!lv.over)pauseLava()}});
