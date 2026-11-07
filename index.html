@@ -113,8 +113,8 @@ h1{margin:0;font-size:24px;line-height:1.15;text-wrap:balance}
 .btn.main{flex:1;background:var(--grad);color:#fff;font-weight:700;font-size:18px;border:0;box-shadow:0 6px 18px rgba(221,90,69,.3)}
 .btn.main:disabled{opacity:.5}
 /* 第二關 溶岩 */
-.arena{position:relative;flex:1 1 auto;margin:10px 0 0;border-radius:18px 18px 0 0;overflow:hidden;background:linear-gradient(180deg,transparent 55%,rgba(255,106,43,.10));border:1px solid var(--line);border-bottom:0}
-.lava{position:absolute;left:0;right:0;bottom:0;height:64px;background:linear-gradient(180deg,var(--lava) 0%,var(--lava2) 70%);box-shadow:0 -10px 40px rgba(255,106,43,.55)}
+.arena{position:relative;flex:1 1 auto;margin:6px 0 0;border-radius:18px 18px 0 0;overflow:hidden;background:linear-gradient(180deg,transparent 55%,rgba(255,106,43,.10));border:1px solid var(--line);border-bottom:0}
+.lava{position:absolute;left:0;right:0;bottom:0;height:34px;background:linear-gradient(180deg,var(--lava) 0%,var(--lava2) 70%);box-shadow:0 -10px 40px rgba(255,106,43,.55)}
 .lava::before{content:"";position:absolute;left:-10%;right:-10%;top:-10px;height:20px;background:radial-gradient(12px 10px at 10px 10px,var(--lava) 98%,transparent) 0 0/40px 20px repeat-x;animation:wave 2.4s linear infinite}
 @keyframes wave{to{transform:translateX(40px)}}
 .lava i{position:absolute;bottom:10px;width:10px;height:10px;border-radius:50%;background:#FFC46B;opacity:0;animation:bub 2.6s ease-in infinite}
@@ -160,12 +160,14 @@ h1{margin:0;font-size:24px;line-height:1.15;text-wrap:balance}
 .study .gcard.now{border-color:var(--gold);background:#2a2216}
 .study .gcard .k{font-size:24px}
 .study .say{grid-row:span 2}
-.mic{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;font-size:15px;color:var(--navy);flex:0 0 auto}
+.mic{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:6px;font-size:14px;white-space:nowrap;overflow:hidden;color:var(--navy);flex:0 0 auto}
 .mic svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
 .mic.zh{color:var(--gold)}
 .mic i{width:8px;height:8px;border-radius:50%;background:currentColor;animation:pulse 1.2s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.25;transform:scale(.6)}}
-.heard{text-align:center;font-size:14px;color:var(--dim);min-height:1.3em;flex:0 0 auto}
+.heard{display:none}
+#s-lava .feedback{font-size:14px;min-height:1.4em;margin:2px 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#s-lava .actions .btn{min-height:44px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 
@@ -244,7 +246,7 @@ h1{margin:0;font-size:24px;line-height:1.15;text-wrap:balance}
   <div class="arena" id="arena"><div class="lava" id="lavaEl"><i style="left:12%"></i><i style="left:38%;animation-delay:.9s"></i><i style="left:63%;animation-delay:1.6s"></i><i style="left:86%;animation-delay:.4s"></i></div></div>
   <div class="mic" id="mic" hidden><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span id="mic-t">說日文…</span><i></i></div>
   <div class="heard" id="heard" hidden></div>
-  <div class="feedback" id="l-fb" style="margin-top:4px">先點一塊，再點它的另一半</div>
+  <div class="feedback" id="l-fb">先點一塊，再點它的另一半</div>
   <div class="actions"><button class="btn sm" onclick="leaveLava()">にげる（逃跑）</button><button class="btn main" id="l-pause" onclick="pauseLava()">待って（暫停）</button></div>
 </section>
 
@@ -538,10 +540,10 @@ const lv={queue:[],total:15,blocks:[],hp:3,gems:0,done:0,missed:[],sel:null,raf:
 const GEM_SVG=`<svg viewBox="0 0 24 24"><path d="M6 4h12l4 6-10 11L2 10z" fill="#E8CD76" stroke="#B8862A" stroke-width="1.5" stroke-linejoin="round"/><path d="M2 10h20M9 4l3 6 3-6M12 10v11" stroke="#B8862A" stroke-width="1.2" fill="none"/></svg>`;
 function beginLava(list,practice){ac();Object.assign(lv,{list,practice:!!practice,okSet:new Set(),queue:[...list],bag:[],blocks:[],hp:5,gems:0,done:0,missed:[],sel:null,spawnAcc:99,speed:20,combo:0,best:0,paused:false,over:false});lv.total=lv.queue.length;
   go('s-lava');const ar=document.getElementById('arena');ar.querySelectorAll('.blk').forEach(b=>b.remove());
-  lavaStart();requestAnimationFrame(()=>{lv.H=ar.clientHeight;lv.lavaY=lv.H-document.getElementById('lavaEl').offsetHeight+6;lvHud();lv.last=performance.now();cancelAnimationFrame(lv.raf);lv.raf=requestAnimationFrame(lvLoop)});
+  lavaStart();requestAnimationFrame(()=>{lv.H=ar.clientHeight;lv.lavaY=lv.H-document.getElementById('lavaEl').offsetHeight+6;lv.base=Math.max(14,lv.lavaY/30);lv.speed=lv.base*(lv.practice?.85:1);lvHud();lv.last=performance.now();cancelAnimationFrame(lv.raf);lv.raf=requestAnimationFrame(lvLoop)});
   document.getElementById('l-pause').textContent='待って（暫停）';const fb=document.getElementById('l-fb');fb.className='feedback';
-  const pre=lv.practice?'練習輪：日文附讀音，掉進岩漿不扣命。':'';
-  if(voiceStart()){fb.textContent=pre+'先說日文，再說中文意思，方塊就會消掉';setTimeout(()=>{if(vc.on)lavaVol(.1)},1400)}else fb.textContent=pre+'先點一塊，再點它的另一半'}
+  const pre=lv.practice?'練習輪・附讀音・不扣命　':'';
+  if(voiceStart()){fb.textContent=pre+'先說日文，再說中文';setTimeout(()=>{if(vc.on)lavaVol(.1)},1400)}else fb.textContent=pre+'點日文，再點中文'}
 function lvHud(){document.getElementById('l-hp').innerHTML=hearts(lv.hp);document.getElementById('l-count').textContent=`${lv.practice?'練習':'正式'} ${lv.done} / ${lv.total}`;document.getElementById('l-gems').lastChild.textContent=' '+lv.gems}
 const LANES=['2%','34.5%','67%'];
 function mkBlock(p,type,lane,y,v){const ar=document.getElementById('arena');const el=document.createElement('button');el.className='blk '+type;
@@ -581,7 +583,7 @@ function tapBlock(b){if(!b.alive||lv.paused||lv.over)return;if(vc.on&&vc.want===
   s.el.classList.remove('sel');lv.sel=null;[s,b].forEach(x=>{x.el.classList.remove('wrong');void x.el.offsetWidth;x.el.classList.add('wrong')});SFX.wrong();lv.combo=0;
   const fb=document.getElementById('l-fb');fb.className='feedback no';fb.textContent=`「${s.type==='zh'?s.p.m:s.p.j}」和「${b.type==='zh'?b.p.m:b.p.j}」不是一對，岩漿在偷笑。`}
 function match(a,b){const ra=a.el.getBoundingClientRect(),rb=b?b.el.getBoundingClientRect():ra;kill(a);if(b)kill(b);
-  lv.gems++;lv.done++;lv.combo++;lv.best=Math.max(lv.best,lv.combo);META.gems++;if(lv.combo>META.best)META.best=lv.combo;if(!lv.practice){lv.okSet.add(a.p);mark(pKey(a.p),true)}lv.speed=Math.min(60,lv.speed+1.2);lvHud();
+  lv.gems++;lv.done++;lv.combo++;lv.best=Math.max(lv.best,lv.combo);META.gems++;if(lv.combo>META.best)META.best=lv.combo;if(!lv.practice){lv.okSet.add(a.p);mark(pKey(a.p),true)}lv.speed=Math.min(lv.base*2,lv.speed+lv.base*.07);lvHud();
   SFX.gem();const fb=document.getElementById('l-fb');fb.className='feedback ok';fb.innerHTML=`宝物ゲット！<span class="ans">${a.p.j}</span>　${a.p.m}${lv.combo>1?`　連擊 ×${lv.combo}`:''}`;
   const g=document.createElement('div');g.className='gem';g.innerHTML=GEM_SVG;document.body.appendChild(g);
   const mx=(ra.left+ra.width/2+rb.left+rb.width/2)/2-20,my=(ra.top+ra.height/2+rb.top+rb.height/2)/2-20,t=document.getElementById('l-gems').getBoundingClientRect();
@@ -596,8 +598,8 @@ const normZh=t=>t.normalize('NFKC').replace(/[\s、。．，,.!！?？「」（�
 function lev(a,b){const m=a.length,n=b.length;if(!m||!n)return Math.max(m,n);let prev=[...Array(n+1).keys()];for(let i=1;i<=m;i++){const cur=[i];for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=cur}return prev[n]}
 function sim(a,b){if(!a||!b)return 0;if(a.includes(b)||b.includes(a))return Math.min(a.length,b.length)/Math.max(a.length,b.length)>.5?1:.6;return 1-lev(a,b)/Math.max(a.length,b.length)}
 function voiceUi(){const m=document.getElementById('mic'),h=document.getElementById('heard');const on=vc.on&&!lv.over;m.hidden=!on;h.hidden=!on;if(!on)return;
-  m.className='mic'+(vc.want==='zh'?' zh':'');document.getElementById('mic-t').textContent=vc.want==='zh'&&vc.pick?`換說中文：「${vc.pick.p.j}」是什麼意思？`:'說出畫面上的日文…'}
-function showHeard(t,final){const h=document.getElementById('heard');h.textContent=t?`聽到：${t}${final?'':'…'}`:''}
+  m.className='mic'+(vc.want==='zh'?' zh':'');document.getElementById('mic-t').textContent=vc.want==='zh'&&vc.pick?`換說中文：${vc.pick.p.j}`:'說日文…'}
+function showHeard(t,final){if(!t)return;const fb=document.getElementById('l-fb');fb.className='feedback';fb.textContent=`聽到：${t}${final?'':'…'}`}
 function voiceStart(){if(!SR||vc.denied)return false;vc.on=true;vc.want='ja';vc.pick=null;listen();voiceUi();return true}
 function voiceStop(){vc.on=false;try{vc.rec&&vc.rec.abort()}catch(e){}vc.rec=null;voiceUi()}
 function listen(){if(!vc.on||lv.over||lv.paused||vc.rec)return;let r;try{r=new SR()}catch(e){vc.on=false;voiceUi();return}vc.rec=r;
