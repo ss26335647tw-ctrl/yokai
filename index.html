@@ -505,7 +505,7 @@ function toggleRuby(){META.ruby=META.ruby===false;save();paintRuby()}
 function openStudy(title,items,per,onStart,timed,opts){ac();document.getElementById('st-opt').hidden=!(opts&&opts.ruby);paintRuby();Object.assign(study,{list:items,PER:per,dur:items.length*per,idx:-1,onStart,timed:!!timed});
   document.querySelector('#s-study .tag').textContent=opts&&opts.tag?opts.tag:timed?'時間到就開戰。點喇叭可以再聽一次。':(opts&&opts.ruby?'不限時，會一直輪流唸。背好了再按開始。':'不限時，會一直輪流唸。背好了再按開始，接著先描字練習。');
   document.getElementById('st-title').textContent=title;
-  document.getElementById('st-list').innerHTML=(opts&&opts.intro||'')+items.map((w,i)=>`<div class="gcard" id="st-${i}"><span class="k">${w.k}</span><button class="say" aria-label="唸出來" data-say="${w.say}"><svg><use href="#i-snd"/></svg></button><span class="m">${w.sub}</span>${w.pun?`<span class="pun"><b>${w.pun[0]}</b>　${w.pun[1]}</span>`:''}</div>`).join('');
+  document.getElementById('st-list').innerHTML=(opts&&opts.intro||'')+items.map((w,i)=>`<div class="gcard" id="st-${i}"><span class="k"${w.k.length>11?' style="font-size:19px"':''}>${w.k}</span><button class="say" aria-label="唸出來" data-say="${w.say}"><svg><use href="#i-snd"/></svg></button><span class="m">${w.sub}</span>${w.pun?`<span class="pun"><b>${w.pun[0]}</b>　${w.pun[1]}</span>`:''}</div>`).join('');
   document.querySelectorAll('#st-list .say').forEach(b=>b.onclick=()=>say(b.dataset.say));
   go('s-study');document.getElementById('st-list').scrollTop=0;study.t0=performance.now();cancelAnimationFrame(study.raf);stTick()}
 function pendGet(kind,build,ser,de){let list=null;try{const sv=META.pend&&META.pend[kind];if(sv){list=de(sv);if(!list.length||list.some(x=>!x))list=null}}catch(e){list=null}
@@ -737,7 +737,7 @@ function ruleOnly(v,f){if(v.g===2)return `去掉「る」再接 ${["ます","な
   const e=v.d.slice(-1),ex=v.d==="いく"&&(f===2||f===3)?"（行く是例外）":"";let r=[`「${e}」改成い段＋ます`,`「${e}」改成あ段＋ない`+(e==="う"?"（う→わ）":""),`${e} 結尾→「${ROW[e][4]}」${ex}`,`${e} 結尾→「${ROW[e][5]}」${ex}`,`「${e}」改成え段＋る`,`「${e}」改成お段＋う`][f];
   if(v.d.endsWith("る"))r+="・陷阱字";return r}
 function startVerb(){const q=pendGet('v',()=>shuffle(VERBS).slice(0,10).map(v=>({v,f:Math.floor(Math.random()*6)})),l=>l.map(x=>[x.v.d,x.f]),a=>a.map(([d,f])=>{const v=VERBS.find(x=>x.d===d);return v?{v,f}:null}));
-  openStudy('番外・化け術 先看規則',q.map(({v,f})=>({k:`${v.d} → ${FORMS[f]}`,sub:`${v.k}（${v.m}）`,say:v.d,pun:[GNAME[v.g],ruleOnly(v,f)]})),4000,()=>beginVerb(q),false,{intro:VERB_RULES,tag:'先看規則再看題目，答案自己變。不限時，看好了再開始。'})}
+  openStudy('番外・化け術 教學',q.map(({v,f})=>{const c=conj(v.d,v.g,f);return {k:`${v.d} → ${c}`,sub:`${v.k}（${v.m}）・${FORMS[f]}`,say:`${v.d}、${c}`,pun:[GNAME[v.g],ruleOnly(v,f)]}}),5000,()=>beginVerb(q),false,{intro:VERB_RULES,tag:'每題會唸原形和變化後的形。不限時，看好了再開始考。'})}
 function beginVerb(q){ac();pendClear('v');vb.q=q;Object.assign(vb,{i:0,combo:0,best:0,score:0});go('s-verb');verbShow()}
 function verbShow(){const {v,f}=vb.q[vb.i];vb.done=false;document.getElementById('v-count').textContent=`${vb.i+1} / 10`;document.getElementById('v-combo').textContent=`連擊 ${vb.combo}`;document.getElementById('v-score').textContent=`${vb.score} 分`;
   document.getElementById('v-verb').textContent=v.d;document.getElementById('v-k').textContent=`${v.k}（${v.m}）`;document.getElementById('v-form').textContent=FORMS[f];
@@ -761,7 +761,7 @@ function verbNext(){vb.i++;if(vb.i>=vb.q.length){showResult({big:'化',title:'�
 function leaveVerb(){cancelAnimationFrame(vb.raf);go('s-home')}
 
 /* ===== 版本與重新整理（只在自架網站顯示） ===== */
-const APP_VER='2026.11.08l';
+const APP_VER='2026.11.08m';
 function hardReload(){toast('抓最新版中…');setTimeout(()=>{try{location.replace(location.pathname+'?v='+Date.now())}catch(e){location.reload()}},250)}
 if(/github\.io$/.test(location.hostname)){document.getElementById('reloadBtn').hidden=false;document.getElementById('verTag').textContent='　v'+APP_VER}
 /* ===== 啟動 ===== */
