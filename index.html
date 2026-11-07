@@ -328,7 +328,7 @@ const SFX={
   back(){noise(.45,320,'lowpass',.5);tone('sine',90,40,.4,.3)},
   wrong(){tone('square',200,150,.18,.1,900)},
   gem(){[988,1319,1568].forEach((f,i)=>setTimeout(()=>tone('triangle',f,f,.25,.14),i*70))},
-  sizzle(){noise(.7,3000,'highpass',.22);tone('sine',140,60,.5,.12)},
+  sizzle(){noise(.7,3000,'highpass',.12);tone('sine',140,60,.5,.07)},
   pick(){tone('triangle',660,700,.07,.08)}
 };
 let JA_VOICE=null;
@@ -345,9 +345,9 @@ function unlock(){if(unlocked)return;unlocked=true;const a=ac();try{if(a){const 
 ['touchend','click','keydown'].forEach(ev=>document.addEventListener(ev,unlock,{capture:true,passive:true}));
 /* 岩漿滾滾聲：低頻轟隆底噪＋隨機咕嚕冒泡 */
 let lavaAmb=null;
-function blub(){const a=ac();if(!a)return;const t=a.currentTime,o=a.createOscillator(),g=a.createGain();o.type='sine';const f0=70+Math.random()*110;o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f0*(2.2+Math.random()),t+.08+Math.random()*.06);env(a,g,t,.1+Math.random()*.12,.008,.13);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+.25)}
+function blub(){const a=ac();if(!a)return;const t=a.currentTime,o=a.createOscillator(),g=a.createGain();o.type='sine';const f0=70+Math.random()*110;o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f0*(2.2+Math.random()),t+.08+Math.random()*.06);env(a,g,t,.035+Math.random()*.045,.008,.13);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+.25)}
 function lavaStart(){const a=ac();if(!a||lavaAmb)return;const len=a.sampleRate*4,b=a.createBuffer(1,len,a.sampleRate),d=b.getChannelData(0);let last=0;for(let i=0;i<len;i++){last=(last+.02*(Math.random()*2-1))/1.02;d[i]=last*3.5}
-  const src=a.createBufferSource();src.buffer=b;src.loop=true;const f=a.createBiquadFilter();f.type='lowpass';f.frequency.value=360;f.Q.value=1.2;const g=a.createGain();g.gain.setValueAtTime(0,a.currentTime);g.gain.linearRampToValueAtTime(.6,a.currentTime+1.2);
+  const src=a.createBufferSource();src.buffer=b;src.loop=true;const f=a.createBiquadFilter();f.type='lowpass';f.frequency.value=360;f.Q.value=1.2;const g=a.createGain();g.gain.setValueAtTime(0,a.currentTime);g.gain.linearRampToValueAtTime(.22,a.currentTime+1.2);
   const l=a.createOscillator(),lg=a.createGain();l.frequency.value=.23;lg.gain.value=170;l.connect(lg);lg.connect(f.frequency);src.connect(f);f.connect(g);g.connect(a.destination);src.start();l.start();
   lavaAmb={src,l,g,t:0};const pop=()=>{if(!lavaAmb)return;if(!lv.paused){blub();if(Math.random()<.35)setTimeout(blub,70+Math.random()*90)}lavaAmb.t=setTimeout(pop,220+Math.random()*850)};pop()}
 function lavaStop(){if(!lavaAmb||!AC)return;const t=AC.currentTime;clearTimeout(lavaAmb.t);try{lavaAmb.g.gain.cancelScheduledValues(t);lavaAmb.g.gain.setValueAtTime(lavaAmb.g.gain.value,t);lavaAmb.g.gain.linearRampToValueAtTime(0,t+.4);lavaAmb.src.stop(t+.45);lavaAmb.l.stop(t+.45)}catch(e){}lavaAmb=null}
@@ -541,7 +541,7 @@ function beginLava(list,practice){ac();Object.assign(lv,{list,practice:!!practic
   lavaStart();requestAnimationFrame(()=>{lv.H=ar.clientHeight;lv.lavaY=lv.H-document.getElementById('lavaEl').offsetHeight+6;lvHud();lv.last=performance.now();cancelAnimationFrame(lv.raf);lv.raf=requestAnimationFrame(lvLoop)});
   document.getElementById('l-pause').textContent='待って（暫停）';const fb=document.getElementById('l-fb');fb.className='feedback';
   const pre=lv.practice?'練習輪：日文附讀音，掉進岩漿不扣命。':'';
-  if(voiceStart()){fb.textContent=pre+'先說日文，再說中文意思，方塊就會消掉';setTimeout(()=>{if(vc.on)lavaVol(.25)},1400)}else fb.textContent=pre+'先點一塊，再點它的另一半'}
+  if(voiceStart()){fb.textContent=pre+'先說日文，再說中文意思，方塊就會消掉';setTimeout(()=>{if(vc.on)lavaVol(.1)},1400)}else fb.textContent=pre+'先點一塊，再點它的另一半'}
 function lvHud(){document.getElementById('l-hp').innerHTML=hearts(lv.hp);document.getElementById('l-count').textContent=`${lv.practice?'練習':'正式'} ${lv.done} / ${lv.total}`;document.getElementById('l-gems').lastChild.textContent=' '+lv.gems}
 const LANES=['2%','34.5%','67%'];
 function mkBlock(p,type,lane,y,v){const ar=document.getElementById('arena');const el=document.createElement('button');el.className='blk '+type;
@@ -615,7 +615,7 @@ function tryVoice(alts,final){if(lv.paused||lv.over)return false;const fb=docume
   let bs=0;for(const a of alts)bs=Math.max(bs,sim(normZh(a),normZh(b.p.m)));
   if(bs>=(final?.5:.66)){const partner=lv.blocks.find(x=>x.alive&&x.type==='zh'&&x.p===b.p);if(!partner)lv.bag=lv.bag.filter(h=>h.p!==b.p);vc.pick=null;match(b,partner||null);setWant('ja');return true}
   if(final){b.el.classList.remove('wrong');void b.el.offsetWidth;b.el.classList.add('wrong');SFX.wrong();lv.combo=0;fb.className='feedback no';fb.textContent=`「${alts[0]}」不是「${b.p.j}」的意思，再說一次`}return false}
-function pauseLava(){if(lv.over)return;lv.paused=!lv.paused;document.getElementById('l-pause').textContent=lv.paused?'再開（繼續）':'待って（暫停）';document.getElementById('arena').style.filter=lv.paused?'blur(6px)':'';lavaVol(lv.paused?.12:(vc.on?.25:.6));if(lv.paused){try{vc.rec&&vc.rec.abort()}catch(e){}}else{lv.last=performance.now();if(vc.on)listen()}}
+function pauseLava(){if(lv.over)return;lv.paused=!lv.paused;document.getElementById('l-pause').textContent=lv.paused?'再開（繼續）':'待って（暫停）';document.getElementById('arena').style.filter=lv.paused?'blur(6px)':'';lavaVol(lv.paused?.05:(vc.on?.1:.22));if(lv.paused){try{vc.rec&&vc.rec.abort()}catch(e){}}else{lv.last=performance.now();if(vc.on)listen()}}
 function leaveLava(){lv.over=true;cancelAnimationFrame(lv.raf);lavaStop();voiceStop();document.getElementById('arena').style.filter='';go('s-home')}
 function lavaRoundDone(){if(lv.practice){lv.over=true;cancelAnimationFrame(lv.raf);voiceStop();toast('練習完成，正式開始！');setTimeout(()=>{if(document.getElementById('s-lava').classList.contains('on'))beginLava(shuffle(lv.list),false)},1300);return}endLava()}
 function endLava(){lv.over=true;cancelAnimationFrame(lv.raf);lavaStop();voiceStop();save();const dead=lv.hp<=0;
