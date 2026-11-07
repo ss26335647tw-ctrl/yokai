@@ -649,15 +649,22 @@ function listen(){if(!vc.on||lv.over||lv.paused||vc.rec)return;let r;try{r=new S
   r.onend=()=>{if(vc.rec===r)vc.rec=null;if(vc.on&&!lv.over&&!lv.paused)listen()};
   try{r.start()}catch(e){vc.rec=null;setTimeout(listen,400)}voiceUi()}
 function setWant(w){if(vc.want===w&&w==='ja'&&!vc.pick){voiceUi();return}vc.want=w;if(w==='ja'){if(vc.pick&&vc.pick.alive)vc.pick.el.classList.remove('sel');vc.pick=null;lv.sel=null}voiceUi();try{vc.rec&&vc.rec.abort()}catch(e){}}
+/* 同一句的各種寫法：漢字部分可以換成讀音（年を取る／年をとる／としを取る／としをとる） */
+const varCache=new Map();
+function variantsOf(p){if(varCache.has(p))return varCache.get(p);const j=normJa(p.j),r=normJa(p.r);const runs=j.match(/[\u4e00-\u9fff々]+|[^\u4e00-\u9fff々]+/g)||[j];
+  let out=[j,r];const re=new RegExp('^'+runs.map(x=>/[\u4e00-\u9fff々]/.test(x)?'(.+?)':x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('')+'$');const m=r.match(re);
+  if(m){const reads=m.slice(1);let combos=[''];let ki=0;for(const x of runs){if(/[\u4e00-\u9fff々]/.test(x)){const rd=reads[ki++];combos=combos.flatMap(c=>[c+x,c+rd])}else combos=combos.map(c=>c+x)}out=out.concat(combos)}
+  out=[...new Set(out)];varCache.set(p,out);return out}
+/* 在聽到的文字裡找最像的一段（長度要至少跟整句一樣，唸一半不算） */
+function voiceScore(x,p){let best=0;for(const v of variantsOf(p)){const L=v.length;if(x.length<L)continue;if(x.includes(v))return 1;
+  if(L<=3)continue;for(let i=0;i+L<=x.length;i++)for(const w of [L,L+1]){if(i+w>x.length)continue;const seg=x.substr(i,w);best=Math.max(best,1-lev(seg,v)/Math.max(w,L))}}return best}
 function tryVoice(alts,final){if(lv.paused||lv.over)return false;const fb=document.getElementById('l-fb');
   if(vc.want==='ja'){
     /* 整句唸完才算：辨識文字裡要包含整句（漢字或讀音）；寫法不同（例如 掛ける／かける）就等最後結果再比相似度 */
     const now=performance.now();let best=null,bs=0;
-    for(const b of lv.blocks){if(!b.alive||b.type!=='ja')continue;const T=[normJa(b.p.j),normJa(b.p.r)];
-      for(const a of alts){const x=normJa(a);let sc=T.some(t=>x.includes(t))?1:0;
-        if(!sc&&final)sc=Math.max(...T.map(t=>1-lev(x,t)/Math.max(x.length,t.length)));
-        if(sc>bs||(sc===bs&&best&&b.p===best.p&&b.y>best.y)){bs=sc;best=b}}}
-    if(best&&(bs>=1||(final&&bs>=.7))){
+    for(const b of lv.blocks){if(!b.alive||b.type!=='ja')continue;
+      for(const a of alts){const x=normJa(a),sc=voiceScore(x,b.p);if(sc>bs||(sc===bs&&best&&b.p===best.p&&b.y>best.y)){bs=sc;best=b}}}
+    if(best&&bs>=.75){
       if(vc.lastP===best.p&&now-vc.lastT<1500)return true;   /* 同一句 1.5 秒內不重複算 */
       vc.lastP=best.p;vc.lastT=now;
       const partner=lv.blocks.find(x=>x.alive&&x.type==='zh'&&x.uid===best.uid);if(!partner)lv.bag=lv.bag.filter(h=>h.uid!==best.uid);vc.pick=null;match(best,partner||null);sayZh(best.p.m);return true}
@@ -719,7 +726,7 @@ function verbNext(){vb.i++;if(vb.i>=vb.q.length){showResult({big:'化',title:'�
 function leaveVerb(){cancelAnimationFrame(vb.raf);go('s-home')}
 
 /* ===== 版本與重新整理（只在自架網站顯示） ===== */
-const APP_VER='2026.11.08e';
+const APP_VER='2026.11.08f';
 function hardReload(){toast('抓最新版中…');setTimeout(()=>{try{location.replace(location.pathname+'?v='+Date.now())}catch(e){location.reload()}},250)}
 if(/github\.io$/.test(location.hostname)){document.getElementById('reloadBtn').hidden=false;document.getElementById('verTag').textContent='　v'+APP_VER}
 /* ===== 啟動 ===== */
