@@ -1,4 +1,4 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#161311"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>タカラの妖怪封印</title>
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="妖怪封印"><meta name="theme-color" content="#161311"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" href="icon-192.png"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);background:#161311}img{max-width:100%}[hidden]{display:none!important}html,body{overscroll-behavior:none}</style></head><body><title>タカラの妖怪封印</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;600;700&family=IBM+Plex+Mono:wght@500;700&family=Noto+Sans+TC:wght@400;700&family=Yuji+Syuku&display=swap">
 <style>
@@ -26,7 +26,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .screen{display:none;min-height:100%;max-width:520px;margin:0 auto;padding-block:14px 60px}
 .screen.on{display:block;animation:slide .52s var(--ease)}
 @keyframes slide{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
-.focus{padding-bottom:14px;height:100dvh;flex-direction:column;overflow:hidden}
+.focus{padding-bottom:14px;height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));flex-direction:column;overflow:hidden}
 .screen.focus.on{display:flex}
 /* 頂部名片 */
 .card-top{display:grid;grid-template-columns:62px 1fr auto;gap:4px 14px;align-items:center;margin-bottom:18px}
