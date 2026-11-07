@@ -497,7 +497,7 @@ function stTick(){const el=performance.now()-study.t0,n=study.list.length,i=stud
   else{document.getElementById('st-left').textContent='不限時';document.getElementById('stbar').style.transform='scaleX(1)'}study.raf=requestAnimationFrame(stTick)}
 function endStudy(){cancelAnimationFrame(study.raf);try{speechSynthesis.cancel()}catch(e){}study.onStart()}
 function leaveStudy(){cancelAnimationFrame(study.raf);try{speechSynthesis.cancel()}catch(e){}go('s-home')}
-function beginBattle(list,trace){ac();Object.assign(battle,{list,trace:!!trace,boxSize:0,okSet:new Set(),i:0,hp:5,combo:0,best:0,sealed:0,fled:[],locked:false,shooting:false});go('s-battle');nextYokai()}
+function beginBattle(list,trace){ac();Object.assign(battle,{list:[...list],trace:!!trace,boxSize:0,failed:new Set(),reTimes:new Map(),okSet:new Set(),i:0,hp:5,combo:0,best:0,sealed:0,fled:[],locked:false,shooting:false});go('s-battle');nextYokai()}
 function renderSlots(bad){const w=battle.word;document.getElementById('slots').innerHTML=[...w.k].map((ch,i)=>`<span class="slot ${i<battle.ci?'done':i===battle.ci?(bad?'cur bad':'cur'):''}">${i<battle.ci?ch:''}</span>`).join('')}
 function updStroke(r){const w=battle.word;if(battle.ci>=w.k.length){document.getElementById('strk').textContent='';return}const ch=w.k[battle.ci];r=r||analyze(battle.box,ch);
   const need=r.total.join('或'),cls=r.n>Math.max(...r.total)?'over':r.total.includes(r.n)?'ok':'';
@@ -509,7 +509,7 @@ function newBox(ch){const holder=document.getElementById('boxes'),scr=document.g
   battle.boxSize=size;b._onStart=()=>clearTimeout(battle.autoT);battle.box=b;return b}
 function nextYokai(){
   const w=battle.word=battle.list[battle.i];battle.ci=0;battle.charTries=0;battle.locked=false;battle.shooting=false;
-  const last=battle.i===battle.list.length-1;const y=battle.y=last?YOKAI[4]:YOKAI[Math.floor(Math.random()*4)];
+  const last=battle.i===battle.list.length-1&&!battle.trace;const y=battle.y=last?YOKAI[4]:YOKAI[Math.floor(Math.random()*4)];
   const el=document.getElementById('yokai');el.className='yokai hop';el.innerHTML=`<span class="yname">${y.n}${y.boss?'（ボス）':''}</span><svg viewBox="0 0 96 120">${y.svg}</svg>`;el.style.transform='translateX(0)';
   document.getElementById('hp').innerHTML=hearts(battle.hp);document.getElementById('b-count').textContent=`${battle.trace?'描字':'封印'} ${battle.i+1} / ${battle.list.length}`;document.getElementById('b-combo').textContent=`連擊 ${battle.combo}`;
   document.getElementById('p-mean').textContent=w.m;document.getElementById('p-hint').innerHTML='';
@@ -523,7 +523,7 @@ function tick(){const el=(performance.now()-battle.t0)/battle.dur;const span=doc
   document.getElementById('yokai').style.transform=`translateX(${x}px)`;document.getElementById('tbar').style.transform=`scaleX(${Math.max(0,Math.min(1,1-el))})`;
   if(el>=1){timeout();return}battle.raf=requestAnimationFrame(tick)}
 function timeout(){if(battle.locked)return;clearTimeout(battle.autoT);battle.locked=true;battle.combo=0;battle.hp--;document.getElementById('hp').innerHTML=hearts(battle.hp);SFX.back();cry(battle.y);
-  const fb=document.getElementById('fb');fb.className='feedback no';fb.innerHTML=`しまった！${battle.y.n}衝過鳥居了。答案是 <span class="ans">${battle.word.k}</span>`;say(battle.word.k);mark(wKey(battle.word),false);battle.fled.push(battle.word);setTimeout(advance,1900)}
+  const fb=document.getElementById('fb');fb.className='feedback no';fb.innerHTML=`しまった！${battle.y.n}衝過鳥居了。答案是 <span class="ans">${battle.word.k}</span>`;say(battle.word.k);mark(wKey(battle.word),false);if(!battle.fled.includes(battle.word))battle.fled.push(battle.word);requeue(battle.word);setTimeout(advance,1900)}
 function peek(){if(battle.locked)return;battle.box.querySelector('.ghost').hidden=false;battle.combo=0;document.getElementById('b-combo').textContent='連擊 0';toast('洩漏天機，連擊歸零')}
 function stableAfter(n,ms,fn){const box=battle.box;battle.autoT=setTimeout(()=>{if(!battle.locked&&!battle.shooting&&battle.box===box&&!box._drawing&&box._strokes.length===n)fn()},ms)}
 function autoCheck(){clearTimeout(battle.autoT);if(battle.locked||battle.shooting)return;const ch=battle.word.k[battle.ci],r=analyze(battle.box,ch);updStroke(r);
@@ -558,9 +558,11 @@ function miss(reason){clearTimeout(battle.autoT);if(battle.locked||battle.shooti
   battle.charTries++;battle.combo=0;document.getElementById('b-combo').textContent='連擊 0';box.classList.add('bad');renderSlots(true);
   if(battle.charTries===1){battle.hp--;document.getElementById('hp').innerHTML=hearts(battle.hp);SFX.back();fb.className='feedback no';fb.textContent=`符咒反噬！${reason}。${battle.y.taunt}，重寫這個字。`;document.getElementById('p-hint').innerHTML=`漢字：<b>${w.j}</b>`;
     document.querySelector('.stage').animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:300});
-    setTimeout(()=>{clearBox(box);updStroke()},650);if(battle.hp<=0){battle.locked=true;cancelAnimationFrame(battle.raf);mark(wKey(w),false);battle.fled.push(w);setTimeout(advance,1200)}return}
+    setTimeout(()=>{clearBox(box);updStroke()},650);if(battle.hp<=0){battle.locked=true;cancelAnimationFrame(battle.raf);mark(wKey(w),false);if(!battle.fled.includes(w))battle.fled.push(w);battle.failed.add(w);setTimeout(advance,1200)}return}
   battle.locked=true;cancelAnimationFrame(battle.raf);battle.hp--;document.getElementById('hp').innerHTML=hearts(battle.hp);SFX.back();cry(battle.y);
-  fb.className='feedback no';fb.innerHTML=`${reason}。${battle.y.n}逃走了，答案是 <span class="ans">${w.k}</span>`;box.querySelector('.ghost').hidden=false;say(w.k);mark(wKey(w),false);battle.fled.push(w);setTimeout(advance,2300)}
+  fb.className='feedback no';fb.innerHTML=`${reason}。${battle.y.n}逃走了，答案是 <span class="ans">${w.k}</span>`;box.querySelector('.ghost').hidden=false;say(w.k);mark(wKey(w),false);if(!battle.fled.includes(w))battle.fled.push(w);requeue(w);setTimeout(advance,2300)}
+function requeue(w){if(battle.trace)return;battle.failed.add(w);const t=battle.reTimes.get(w)||0;if(t>=2||battle.hp<=0)return;battle.reTimes.set(w,t+1);
+  const pos=Math.min(battle.list.length,battle.i+3);battle.list.splice(pos,0,w);toast(`「${w.m}」等一下會再出現`)}
 function advance(){battle.i++;if(battle.trace&&battle.i>=battle.list.length){toast('描字完成，正式封印！');setTimeout(()=>{if(document.getElementById('s-battle').classList.contains('on'))beginBattle(shuffle(battle.list),false)},1200);return}
   if(battle.hp<=0||battle.i>=battle.list.length){endBattle();return}nextYokai()}
 function leaveBattle(){cancelAnimationFrame(battle.raf);clearTimeout(battle.autoT);battle.locked=true;battle.shooting=false;go('s-home')}
@@ -570,7 +572,7 @@ function showResult(o){document.getElementById('r-big').textContent=o.big;docume
 function endBattle(){cancelAnimationFrame(battle.raf);save();const dead=battle.hp<=0;
   showResult({big:dead?'敗':'封',title:dead?'鳥居被攻破了':'お疲れさま（辛苦了）',sub:dead?'妖怪太多，去妖怪帳複習一下再來。':battle.fled.length?'逃走的妖怪明天會復活。':'全部封印，一隻都沒跑掉。',
     l1:'封印',v1:battle.sealed,l2:'逃走',v2:battle.fled.length,v3:battle.best,
-    ...(()=>{const left=battle.list.filter(w=>!battle.okSet.has(w));return {again:()=>startBattle(left),againLabel:left.length?`もう一回（錯的 ${left.length} 題）`:'新的 5 個字'}})(),
+    ...(()=>{const left=[...new Set(battle.list)].filter(w=>!battle.okSet.has(w)||battle.failed.has(w));return {again:()=>startBattle(left),againLabel:left.length?`もう一回（錯的 ${left.length} 題）`:'新的 5 個字'}})(),
     list:battle.fled.map(w=>`<div class="gcard"><span class="k">${w.k}</span><span class="due now">明天復活</span><span class="m">${w.j}　${w.m}</span></div>`).join(''),})}
 
 /* ===== 第二關 溶岩の試煉 ===== */
@@ -719,7 +721,7 @@ function verbNext(){vb.i++;if(vb.i>=vb.q.length){showResult({big:'化',title:'�
 function leaveVerb(){cancelAnimationFrame(vb.raf);go('s-home')}
 
 /* ===== 版本與重新整理（只在自架網站顯示） ===== */
-const APP_VER='2026.11.08c';
+const APP_VER='2026.11.08d';
 function hardReload(){toast('抓最新版中…');setTimeout(()=>{try{location.replace(location.pathname+'?v='+Date.now())}catch(e){location.reload()}},250)}
 if(/github\.io$/.test(location.hostname)){document.getElementById('reloadBtn').hidden=false;document.getElementById('verTag').textContent='　v'+APP_VER}
 /* ===== 啟動 ===== */
