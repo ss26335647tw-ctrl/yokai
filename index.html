@@ -405,7 +405,7 @@ function makeBox(size,ch,onStroke){
   const pos=e=>{const r=c.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
   c.addEventListener('pointerdown',e=>{if(battle.locked||battle.shooting)return;ac();box._onStart&&box._onStart();c.setPointerCapture(e.pointerId);box._drawing=true;cur=[pos(e)];ctx.beginPath();ctx.moveTo(...cur[0]);ctx.lineTo(cur[0][0]+.1,cur[0][1]);ctx.stroke()});
   c.addEventListener('pointermove',e=>{if(!cur)return;const p=pos(e);cur.push(p);ctx.lineTo(...p);ctx.stroke()});
-  const end=()=>{if(!cur)return;box._drawing=false;let len=0;for(let i=1;i<cur.length;i++)len+=Math.hypot(cur[i][0]-cur[i-1][0],cur[i][1]-cur[i-1][1]);if(len>size*.06||cur.length<4)box._strokes.push(cur);cur=null;box.classList.add('has');box.classList.remove('bad');onStroke&&onStroke()};
+  const end=()=>{if(!cur)return;box._drawing=false;let len=0;for(let i=1;i<cur.length;i++)len+=Math.hypot(cur[i][0]-cur[i-1][0],cur[i][1]-cur[i-1][1]);if(len>size*.02||cur.length<4)box._strokes.push(cur);cur=null;box.classList.add('has');box.classList.remove('bad');onStroke&&onStroke()};
   c.addEventListener('pointerup',end);c.addEventListener('pointercancel',end);
   box._ctx=ctx;box._size=size;return box;
 }
@@ -468,7 +468,7 @@ function sinfo(st){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9,len=0;st.forEach((p,i)=>{x0
   return {x0,y0,x1,y1,cx:(x0+x1)/2,cy:(y0+y1)/2,d:Math.hypot(x1-x0,y1-y0),len,gap:Math.hypot(st[0][0]-st[st.length-1][0],st[0][1]-st[st.length-1][1])}}
 function bboxOf(list){return list.reduce((a,b)=>({x0:Math.min(a.x0,b.x0),y0:Math.min(a.y0,b.y0),x1:Math.max(a.x1,b.x1),y1:Math.max(a.y1,b.y1)}),{x0:1e9,y0:1e9,x1:-1e9,y1:-1e9})}
 function isMark(t,body,type){const W=Math.max(1,body.x1-body.x0),H=Math.max(1,body.y1-body.y0),S=Math.max(W,H);
-  const topRight=t.cx>=body.x0+W*.5&&t.cy<=body.y0+H*.55&&t.d<=S*.4;if(!topRight)return false;
+  const topRight=t.cx>=body.x0+W*.45&&t.cy<=body.y0+H*.65&&t.d<=S*.45;if(!topRight)return false;
   const loop=t.len>t.d*1.7&&t.gap<t.d*.6;return type==='h'?loop:!loop}
 function gridOf(strokes,size){if(!strokes.length)return null;const k=64/size;return gridFromDraw(x=>{x.lineWidth=3;x.lineCap=x.lineJoin='round';x.strokeStyle='#000';strokes.forEach(s=>{x.beginPath();x.moveTo(s[0][0]*k,s[0][1]*k);s.forEach(p=>x.lineTo(p[0]*k,p[1]*k));x.stroke()})})}
 function analyze(box,ch){
@@ -761,7 +761,7 @@ function verbNext(){vb.i++;if(vb.i>=vb.q.length){showResult({big:'化',title:'�
 function leaveVerb(){cancelAnimationFrame(vb.raf);go('s-home')}
 
 /* ===== 版本與重新整理（只在自架網站顯示） ===== */
-const APP_VER='2026.11.08m';
+const APP_VER='2026.11.08n';
 function hardReload(){toast('抓最新版中…');setTimeout(()=>{try{location.replace(location.pathname+'?v='+Date.now())}catch(e){location.reload()}},250)}
 if(/github\.io$/.test(location.hostname)){document.getElementById('reloadBtn').hidden=false;document.getElementById('verTag').textContent='　v'+APP_VER}
 /* ===== 啟動 ===== */
