@@ -541,30 +541,32 @@ function endBattle(){cancelAnimationFrame(battle.raf);save();const dead=battle.h
 /* ===== 第二關 溶岩の試煉 ===== */
 const lv={queue:[],total:15,blocks:[],hp:3,gems:0,done:0,missed:[],sel:null,raf:0,last:0,spawnAcc:0,speed:34,combo:0,best:0,paused:false,over:false,H:0,lavaY:0};
 const GEM_SVG=`<svg viewBox="0 0 24 24"><path d="M6 4h12l4 6-10 11L2 10z" fill="#E8CD76" stroke="#B8862A" stroke-width="1.5" stroke-linejoin="round"/><path d="M2 10h20M9 4l3 6 3-6M12 10v11" stroke="#B8862A" stroke-width="1.2" fill="none"/></svg>`;
-function beginLava(list,practice){ac();Object.assign(lv,{list,practice:!!practice,okSet:new Set(),queue:[...list],bag:[],blocks:[],hp:5,gems:0,done:0,missed:[],sel:null,spawnAcc:99,speed:20,combo:0,best:0,paused:false,over:false});lv.total=lv.queue.length;
+const REPEAT=3;
+function buildQueue(list){let q=[],uid=0;for(let r=0;r<REPEAT;r++){let part=shuffle(list);if(q.length&&part[0]===q[q.length-1].p&&part.length>1)part.push(part.shift());part.forEach(p=>q.push({p,uid:uid++}))}return q}
+function beginLava(list,practice){ac();Object.assign(lv,{list,practice:!!practice,hit:new Map(),queue:buildQueue(list),bag:[],blocks:[],hp:5,gems:0,done:0,missed:[],sel:null,spawnAcc:99,speed:20,combo:0,best:0,paused:false,over:false});lv.total=lv.queue.length;
   go('s-lava');const ar=document.getElementById('arena');ar.querySelectorAll('.blk').forEach(b=>b.remove());
   lavaStart();requestAnimationFrame(()=>{lv.H=ar.clientHeight;lv.lavaY=lv.H-document.getElementById('lavaEl').offsetHeight+6;lv.base=Math.max(14,lv.lavaY/30);lv.speed=lv.base*(lv.practice?.85:1);lvHud();lv.last=performance.now();cancelAnimationFrame(lv.raf);lv.raf=requestAnimationFrame(lvLoop)});
   document.getElementById('l-pause').textContent='待って（暫停）';const fb=document.getElementById('l-fb');fb.className='feedback';
   const pre='';
-  if(voiceStart()){fb.textContent=pre+'先說日文，再說中文';setTimeout(()=>{if(vc.on)lavaVol(.1)},1400)}else fb.textContent=pre+'點日文，再點中文'}
+  if(voiceStart()){fb.textContent=pre+'唸出日文，方塊就消掉';setTimeout(()=>{if(vc.on)lavaVol(.1)},1400)}else fb.textContent=pre+'點日文，再點中文'}
 function lvHud(){document.getElementById('l-hp').innerHTML=hearts(lv.hp);document.getElementById('l-count').textContent=`${lv.done} / ${lv.total}`;document.getElementById('l-gems').lastChild.textContent=' '+lv.gems}
 const LANES=['2%','34.5%','67%'];
-function mkBlock(p,type,lane,y,v){const ar=document.getElementById('arena');const el=document.createElement('button');el.className='blk '+type;
-  el.innerHTML=`<span class="lb">${type==='zh'?'中文':'日本語'}</span>${type==='zh'?p.m:p.j}${type==='ja'&&META.ruby!==false?`<span class="lb" style="margin:2px 0 0;letter-spacing:0;font-family:var(--fs);font-size:11px">${p.r}</span>`:''}`;const b={p,type,lane,y,el,alive:true,v:v||1};
+function mkBlock(p,type,lane,y,v,uid){const ar=document.getElementById('arena');const el=document.createElement('button');el.className='blk '+type;
+  el.innerHTML=`<span class="lb">${type==='zh'?'中文':'日本語'}</span>${type==='zh'?p.m:p.j}${type==='ja'&&META.ruby!==false?`<span class="lb" style="margin:2px 0 0;letter-spacing:0;font-family:var(--fs);font-size:11px">${p.r}</span>`:''}`;const b={p,uid,type,lane,y,el,alive:true,v:v||1};
   el.style.left=LANES[lane];el.style.transform=`translateY(${y}px)`;el.onclick=()=>tapBlock(b);ar.appendChild(el);lv.blocks.push(b);return b}
 /* 同一組的中文和日文接著掉、速度一樣，所以會在附近；組跟組之間的速度不同 */
-function refillBag(){const n=Math.min(3,lv.queue.length);for(let i=0;i<n;i++){const p=lv.queue.shift(),v=.65+Math.random()*.85,pair=shuffle([{p,type:'zh',v},{p,type:'ja',v}]);lv.bag.push(...pair)}}
+function refillBag(){const n=Math.min(3,lv.queue.length);for(let i=0;i<n;i++){const {p,uid}=lv.queue.shift(),v=.65+Math.random()*.85,pair=shuffle([{p,uid,type:'zh',v},{p,uid,type:'ja',v}]);lv.bag.push(...pair)}}
 function spawnOne(){if(lv.bag.length<3&&lv.queue.length)refillBag();const h=lv.bag.shift();if(!h)return false;
   const top=l=>{const ys=lv.blocks.filter(b=>b.alive&&b.lane===l).map(b=>b.y);return ys.length?Math.min(...ys):1e9};
-  const mate=lv.blocks.find(b=>b.alive&&b.p===h.p);
+  const mate=lv.blocks.find(b=>b.alive&&b.uid===h.uid);
   if(mate){const near=[0,1,2].filter(l=>Math.abs(l-mate.lane)===1);const lane=near[Math.floor(Math.random()*near.length)];
-    mkBlock(h.p,h.type,lane,Math.min(mate.y-10,top(lane)-70),h.v);return true}
+    mkBlock(h.p,h.type,lane,Math.min(mate.y-10,top(lane)-70),h.v,h.uid);return true}
   const free=[0,1,2].filter(l=>top(l)>80);if(!free.length){lv.bag.unshift(h);return false}
-  const lane=free[Math.floor(Math.random()*free.length)];mkBlock(h.p,h.type,lane,-70,h.v);return true}
+  const lane=free[Math.floor(Math.random()*free.length)];mkBlock(h.p,h.type,lane,-70,h.v,h.uid);return true}
 function lvLoop(now){const dt=Math.min(.05,(now-lv.last)/1000);lv.last=now;
   if(!lv.paused&&!lv.over){
     lv.spawnAcc+=dt;const gap=Math.max(.55,60/lv.speed);const alive=lv.blocks.filter(b=>b.alive).length;
-    const mateWaiting=lv.bag.length&&lv.blocks.some(b=>b.alive&&b.p===lv.bag[0].p);
+    const mateWaiting=lv.bag.length&&lv.blocks.some(b=>b.alive&&b.uid===lv.bag[0].uid);
     if((lv.bag.length||lv.queue.length)&&(lv.spawnAcc>=gap||alive<2||(mateWaiting&&lv.spawnAcc>=.35))){if(spawnOne())lv.spawnAcc=0}
     const order=lv.blocks.filter(b=>b.alive).sort((p,q)=>q.y-p.y);
     for(const b of order){if(!b.alive)continue;let ny=b.y+lv.speed*b.v*dt;
@@ -576,17 +578,17 @@ function lvLoop(now){const dt=Math.min(.05,(now-lv.last)/1000);lv.last=now;
   }
   lv.raf=requestAnimationFrame(lvLoop)}
 function kill(b,cls){b.alive=false;if(lv.sel===b)lv.sel=null;b.el.onclick=null;if(cls){b.el.classList.add(cls);setTimeout(()=>b.el.remove(),520)}else b.el.remove()}
-function burn(b){const partner=lv.blocks.find(x=>x.alive&&x!==b&&x.p===b.p);kill(b,'burn');if(partner)kill(partner,'burn');lv.bag=lv.bag.filter(h=>h.p!==b.p);SFX.sizzle();lv.combo=0;lv.done++;if(!lv.practice){lv.hp--;lv.missed.push(b.p);mark(pKey(b.p),false)}lvHud();
+function burn(b){const partner=lv.blocks.find(x=>x.alive&&x!==b&&x.uid===b.uid);kill(b,'burn');if(partner)kill(partner,'burn');lv.bag=lv.bag.filter(h=>h.uid!==b.uid);SFX.sizzle();lv.combo=0;lv.done++;if(!lv.practice){lv.hp--;if(!lv.missed.includes(b.p))lv.missed.push(b.p);mark(pKey(b.p),false)}lvHud();
   const fb=document.getElementById('l-fb');fb.className='feedback no';fb.innerHTML=`溶けた…「${b.p.j}」＝${b.p.m}`;if(lv.hp<=0){lv.over=true;setTimeout(endLava,700)}}
 function tapBlock(b){if(!b.alive||lv.paused||lv.over)return;if(vc.on&&vc.want==='zh')setWant('ja');if(b.type==='ja')say(b.p.r);const s=lv.sel;
   if(!s){lv.sel=b;b.el.classList.add('sel');SFX.pick();return}
   if(s===b){b.el.classList.remove('sel');lv.sel=null;return}
   if(s.type===b.type){s.el.classList.remove('sel');lv.sel=b;b.el.classList.add('sel');SFX.pick();return}
-  if(s.p===b.p){match(s,b);return}
+  if(s.p===b.p){if(s.uid!==b.uid){const ms=lv.blocks.find(x=>x.alive&&x.uid===s.uid&&x!==s),mb=lv.blocks.find(x=>x.alive&&x.uid===b.uid&&x!==b);if(ms&&mb){ms.uid=b.uid;mb.uid=s.uid}else if(ms){ms.uid=b.uid;lv.bag.forEach(h=>{if(h.uid===s.uid)h.uid=b.uid})}else if(mb){mb.uid=s.uid;lv.bag.forEach(h=>{if(h.uid===b.uid)h.uid=s.uid})}}match(s,b);return}
   s.el.classList.remove('sel');lv.sel=null;[s,b].forEach(x=>{x.el.classList.remove('wrong');void x.el.offsetWidth;x.el.classList.add('wrong')});SFX.wrong();lv.combo=0;
   const fb=document.getElementById('l-fb');fb.className='feedback no';fb.textContent=`「${s.type==='zh'?s.p.m:s.p.j}」和「${b.type==='zh'?b.p.m:b.p.j}」不是一對，岩漿在偷笑。`}
 function match(a,b){const ra=a.el.getBoundingClientRect(),rb=b?b.el.getBoundingClientRect():ra;kill(a);if(b)kill(b);
-  lv.gems++;lv.done++;lv.combo++;lv.best=Math.max(lv.best,lv.combo);META.gems++;if(lv.combo>META.best)META.best=lv.combo;if(!lv.practice){lv.okSet.add(a.p);mark(pKey(a.p),true)}lv.speed=Math.min(lv.base*2,lv.speed+lv.base*.07);lvHud();
+  lv.gems++;lv.done++;lv.combo++;lv.best=Math.max(lv.best,lv.combo);META.gems++;if(lv.combo>META.best)META.best=lv.combo;if(!lv.practice){lv.hit.set(a.p,(lv.hit.get(a.p)||0)+1);if(lv.hit.get(a.p)===REPEAT&&!lv.missed.includes(a.p))mark(pKey(a.p),true)}lv.speed=Math.min(lv.base*2,lv.speed+lv.base*.07);lvHud();
   SFX.gem();const fb=document.getElementById('l-fb');fb.className='feedback ok';fb.innerHTML=`宝物ゲット！<span class="ans">${a.p.j}</span>　${a.p.m}${lv.combo>1?`　連擊 ×${lv.combo}`:''}`;
   const g=document.createElement('div');g.className='gem';g.innerHTML=GEM_SVG;document.body.appendChild(g);
   const mx=(ra.left+ra.width/2+rb.left+rb.width/2)/2-20,my=(ra.top+ra.height/2+rb.top+rb.height/2)/2-20,t=document.getElementById('l-gems').getBoundingClientRect();
@@ -601,7 +603,7 @@ const normZh=t=>t.normalize('NFKC').replace(/[\s、。．，,.!！?？「」（�
 function lev(a,b){const m=a.length,n=b.length;if(!m||!n)return Math.max(m,n);let prev=[...Array(n+1).keys()];for(let i=1;i<=m;i++){const cur=[i];for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=cur}return prev[n]}
 function sim(a,b){if(!a||!b)return 0;if(a.includes(b)||b.includes(a))return Math.min(a.length,b.length)/Math.max(a.length,b.length)>.5?1:.6;return 1-lev(a,b)/Math.max(a.length,b.length)}
 function voiceUi(){const m=document.getElementById('mic'),h=document.getElementById('heard');const on=vc.on&&!lv.over;m.hidden=!on;h.hidden=!on;if(!on)return;
-  m.className='mic'+(vc.want==='zh'?' zh':'');document.getElementById('mic-t').textContent=vc.want==='zh'&&vc.pick?`換說中文：${vc.pick.p.j}`:'說日文…'}
+  m.className='mic'+(vc.want==='zh'?' zh':'');document.getElementById('mic-t').textContent='唸日文…'}
 function showHeard(t,final){if(!t)return;const fb=document.getElementById('l-fb');fb.className='feedback';fb.textContent=`聽到：${t}${final?'':'…'}`}
 function voiceStart(){if(!SR||vc.denied)return false;vc.on=true;vc.want='ja';vc.pick=null;listen();voiceUi();return true}
 function voiceStop(){vc.on=false;try{vc.rec&&vc.rec.abort()}catch(e){}vc.rec=null;voiceUi()}
@@ -614,11 +616,11 @@ function listen(){if(!vc.on||lv.over||lv.paused||vc.rec)return;let r;try{r=new S
 function setWant(w){if(vc.want===w&&w==='ja'&&!vc.pick){voiceUi();return}vc.want=w;if(w==='ja'){if(vc.pick&&vc.pick.alive)vc.pick.el.classList.remove('sel');vc.pick=null;lv.sel=null}voiceUi();try{vc.rec&&vc.rec.abort()}catch(e){}}
 function tryVoice(alts,final){if(lv.paused||lv.over)return false;const fb=document.getElementById('l-fb');
   if(vc.want==='ja'){let best=null,bs=0;for(const b of lv.blocks){if(!b.alive||b.type!=='ja')continue;for(const a of alts){const x=normJa(a),sc=Math.max(sim(x,normJa(b.p.j)),sim(x,normJa(b.p.r)));if(sc>bs){bs=sc;best=b}}}
-    if(best&&bs>=(final?.6:.72)){lv.blocks.forEach(b=>b.el.classList.remove('sel'));best.el.classList.add('sel');lv.sel=best;vc.pick=best;vc.pickT=performance.now();SFX.pick();fb.className='feedback ok';fb.innerHTML=`<span class="ans">${best.p.j}</span>　日文對了，接著說中文`;setWant('zh');return true}
+    if(best&&bs>=(final?.6:.72)){const partner=lv.blocks.find(x=>x.alive&&x.type==='zh'&&x.uid===best.uid);if(!partner)lv.bag=lv.bag.filter(h=>h.uid!==best.uid);vc.pick=null;match(best,partner||null);try{vc.rec&&vc.rec.abort()}catch(_){}return true}
     if(final){fb.className='feedback no';fb.textContent=`「${alts[0]}」不在畫面上，再看一次方塊`}return false}
   const b=vc.pick;if(!b||!b.alive){setWant('ja');return true}
   let bs=0;for(const a of alts)bs=Math.max(bs,sim(normZh(a),normZh(b.p.m)));
-  if(bs>=(final?.5:.66)){const partner=lv.blocks.find(x=>x.alive&&x.type==='zh'&&x.p===b.p);if(!partner)lv.bag=lv.bag.filter(h=>h.p!==b.p);vc.pick=null;match(b,partner||null);setWant('ja');return true}
+  if(bs>=(final?.5:.66)){const partner=lv.blocks.find(x=>x.alive&&x.type==='zh'&&x.uid===b.uid);if(!partner)lv.bag=lv.bag.filter(h=>h.uid!==b.uid);vc.pick=null;match(b,partner||null);setWant('ja');return true}
   if(final){b.el.classList.remove('wrong');void b.el.offsetWidth;b.el.classList.add('wrong');SFX.wrong();lv.combo=0;fb.className='feedback no';fb.textContent=`「${alts[0]}」不是「${b.p.j}」的意思，再說一次`}return false}
 function pauseLava(){if(lv.over)return;lv.paused=!lv.paused;document.getElementById('l-pause').textContent=lv.paused?'再開（繼續）':'待って（暫停）';document.getElementById('arena').style.filter=lv.paused?'blur(6px)':'';lavaVol(lv.paused?.05:(vc.on?.1:.22));if(lv.paused){try{vc.rec&&vc.rec.abort()}catch(e){}}else{lv.last=performance.now();if(vc.on)listen()}}
 function leaveLava(){lv.over=true;cancelAnimationFrame(lv.raf);lavaStop();voiceStop();document.getElementById('arena').style.filter='';go('s-home')}
@@ -626,7 +628,7 @@ function lavaRoundDone(){if(lv.practice){lv.over=true;cancelAnimationFrame(lv.ra
 function endLava(){lv.over=true;cancelAnimationFrame(lv.raf);lavaStop();voiceStop();save();const dead=lv.hp<=0;
   showResult({big:dead?'溶':'宝',title:dead?'全部溶進岩漿了':'お疲れさま（辛苦了）',sub:dead?'溶掉的片語都記進妖怪帳了。':lv.missed.length?'溶掉的片語明天會再掉下來。':'一塊都沒溶，岩漿很失望。',
     l1:'宝物',v1:lv.gems,l2:'溶けた',v2:lv.missed.length,v3:lv.best,
-    ...(()=>{const left=lv.list.filter(p=>!lv.okSet.has(p));return {again:()=>startLava(left),againLabel:left.length?`もう一回（錯的 ${left.length} 題）`:'新的 10 題'}})(),
+    ...(()=>{const left=lv.list.filter(p=>(lv.hit.get(p)||0)<REPEAT);return {again:()=>startLava(left),againLabel:left.length?`もう一回（錯的 ${left.length} 題）`:'新的 10 題'}})(),
     list:lv.missed.map(p=>`<div class="gcard"><span class="k">${p.j}</span><span class="due now">明天再掉</span><span class="m">${p.r}　${p.m}</span></div>`).join(''),})}
 
 /* ===== 妖怪帳 ===== */
