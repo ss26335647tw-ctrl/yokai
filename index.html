@@ -621,8 +621,17 @@ function listen(){if(!vc.on||lv.over||lv.paused||vc.rec)return;let r;try{r=new S
   try{r.start()}catch(e){vc.rec=null;setTimeout(listen,400)}voiceUi()}
 function setWant(w){if(vc.want===w&&w==='ja'&&!vc.pick){voiceUi();return}vc.want=w;if(w==='ja'){if(vc.pick&&vc.pick.alive)vc.pick.el.classList.remove('sel');vc.pick=null;lv.sel=null}voiceUi();try{vc.rec&&vc.rec.abort()}catch(e){}}
 function tryVoice(alts,final){if(lv.paused||lv.over)return false;const fb=document.getElementById('l-fb');
-  if(vc.want==='ja'){let best=null,bs=0;for(const b of lv.blocks){if(!b.alive||b.type!=='ja')continue;for(const a of alts){const x=normJa(a),sc=Math.max(sim(x,normJa(b.p.j)),sim(x,normJa(b.p.r)));if(sc>bs){bs=sc;best=b}}}
-    if(best&&bs>=(final?.6:.72)){const partner=lv.blocks.find(x=>x.alive&&x.type==='zh'&&x.uid===best.uid);if(!partner)lv.bag=lv.bag.filter(h=>h.uid!==best.uid);vc.pick=null;match(best,partner||null);sayZh(best.p.m);return true}
+  if(vc.want==='ja'){
+    /* 整句唸完才算：辨識文字裡要包含整句（漢字或讀音）；寫法不同（例如 掛ける／かける）就等最後結果再比相似度 */
+    const now=performance.now();let best=null,bs=0;
+    for(const b of lv.blocks){if(!b.alive||b.type!=='ja')continue;const T=[normJa(b.p.j),normJa(b.p.r)];
+      for(const a of alts){const x=normJa(a);let sc=T.some(t=>x.includes(t))?1:0;
+        if(!sc&&final)sc=Math.max(...T.map(t=>1-lev(x,t)/Math.max(x.length,t.length)));
+        if(sc>bs||(sc===bs&&best&&b.p===best.p&&b.y>best.y)){bs=sc;best=b}}}
+    if(best&&(bs>=1||(final&&bs>=.7))){
+      if(vc.lastP===best.p&&now-vc.lastT<1500)return true;   /* 同一句 1.5 秒內不重複算 */
+      vc.lastP=best.p;vc.lastT=now;
+      const partner=lv.blocks.find(x=>x.alive&&x.type==='zh'&&x.uid===best.uid);if(!partner)lv.bag=lv.bag.filter(h=>h.uid!==best.uid);vc.pick=null;match(best,partner||null);sayZh(best.p.m);return true}
     if(final){fb.className='feedback no';fb.textContent=`「${alts[0]}」不在畫面上，再看一次方塊`}return false}
   const b=vc.pick;if(!b||!b.alive){setWant('ja');return true}
   let bs=0;for(const a of alts)bs=Math.max(bs,sim(normZh(a),normZh(b.p.m)));
@@ -681,7 +690,7 @@ function verbNext(){vb.i++;if(vb.i>=vb.q.length){showResult({big:'化',title:'�
 function leaveVerb(){cancelAnimationFrame(vb.raf);go('s-home')}
 
 /* ===== 版本與重新整理（只在自架網站顯示） ===== */
-const APP_VER='2026.11.08';
+const APP_VER='2026.11.08b';
 function hardReload(){toast('抓最新版中…');setTimeout(()=>{try{location.replace(location.pathname+'?v='+Date.now())}catch(e){location.reload()}},250)}
 if(/github\.io$/.test(location.hostname)){document.getElementById('reloadBtn').hidden=false;document.getElementById('verTag').textContent='　v'+APP_VER}
 /* ===== 啟動 ===== */
