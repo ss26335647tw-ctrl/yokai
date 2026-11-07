@@ -123,6 +123,7 @@ h1{margin:0;font-size:24px;line-height:1.15;text-wrap:balance}
 .blk.zh{background:#2A2F45;border:1.5px solid #5C6B9E;color:#E6EBFF}
 .blk.ja{background:#3B2A18;border:1.5px solid #9C7330;color:#FFF1D6}
 .blk .lb{display:block;font-family:var(--fm);font-size:10px;font-weight:500;letter-spacing:.14em;opacity:.6;margin-bottom:2px}
+.blk .jl{display:block}.blk .rl{display:block;font-size:11px;font-weight:500;opacity:.65;margin-top:1px}.blk .zl{display:block;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,241,214,.18);font-size:14px;font-weight:600;color:#BFD0FF}
 .blk.sel{box-shadow:0 0 0 3px var(--gold),0 0 22px rgba(212,165,74,.6)}
 .blk.wrong{animation:shake .4s;border-color:var(--sakura)}
 .blk.burn{transition:opacity .5s,filter .5s;opacity:0;filter:brightness(2) saturate(3) blur(2px)}
@@ -590,7 +591,7 @@ function beginLava(list,practice){ac();Object.assign(lv,{list,practice:!!practic
 function lvHud(){document.getElementById('l-hp').innerHTML=hearts(lv.hp);document.getElementById('l-count').textContent=`${lv.done} / ${lv.total}`;document.getElementById('l-gems').lastChild.textContent=' '+lv.gems}
 const LANES=['2%','34.5%','67%'];
 function mkBlock(p,type,lane,y,v,uid){const ar=document.getElementById('arena');const el=document.createElement('button');el.className='blk '+type;
-  el.innerHTML=`${type==='zh'?p.m:p.j}${type==='ja'&&META.ruby!==false?`<span class="lb" style="margin:2px 0 0;letter-spacing:0;font-family:var(--fs);font-size:11px">${p.r}</span>`:''}`;const b={p,uid,type,lane,y,el,alive:true,v:v||1};
+  el.innerHTML=`<span class="jl">${p.j}</span>${META.ruby!==false?`<span class="rl">${p.r}</span>`:''}<span class="zl">${p.m}</span>`;const b={p,uid,type,lane,y,el,alive:true,v:v||1};
   el.style.left=LANES[lane];el.style.transform=`translateY(${y}px)`;el.onclick=()=>tapBlock(b);ar.appendChild(el);lv.blocks.push(b);return b}
 /* 同一組的中文和日文接著掉、速度一樣，所以會在附近；組跟組之間的速度不同 */
 function refillBag(){const n=Math.min(3,lv.queue.length);for(let i=0;i<n;i++){const {p,uid}=lv.queue.shift(),v=.65+Math.random()*.85,pair=[{p,uid,type:'ja',v}];lv.bag.push(...pair)}}
@@ -726,7 +727,7 @@ function verbNext(){vb.i++;if(vb.i>=vb.q.length){showResult({big:'化',title:'�
 function leaveVerb(){cancelAnimationFrame(vb.raf);go('s-home')}
 
 /* ===== 版本與重新整理（只在自架網站顯示） ===== */
-const APP_VER='2026.11.08f';
+const APP_VER='2026.11.08g';
 function hardReload(){toast('抓最新版中…');setTimeout(()=>{try{location.replace(location.pathname+'?v='+Date.now())}catch(e){location.reload()}},250)}
 if(/github\.io$/.test(location.hostname)){document.getElementById('reloadBtn').hidden=false;document.getElementById('verTag').textContent='　v'+APP_VER}
 /* ===== 啟動 ===== */
