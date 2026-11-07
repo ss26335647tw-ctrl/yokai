@@ -198,7 +198,7 @@ h1{margin:0;font-size:24px;line-height:1.15;text-wrap:balance}
     <button class="tile" onclick="startVerb()"><span class="wm">化</span><span class="no">番外 · 文法</span><h2>狸の化け術</h2><p>動詞變身，6 秒內變出指定的形。</p></button>
     <button class="tile" onclick="showGrave()"><span class="wm">帳</span><span class="no">復習</span><h2>妖怪帳</h2><p id="grave-sub">封印失敗的妖怪會記在這裡。</p></button>
   </div>
-  <p class="note">手寫判定：筆數要對、濁點要在右上角，字形寬鬆一點。寫對會停一下再飛出去。</p>
+  <p class="note">手寫判定：筆數要對、濁點要在右上角，字形要像。寫對會停一下再飛出去。</p>
 </section>
 
 <!-- 第一關 書道封印 -->
@@ -413,6 +413,35 @@ function iou(a,b){if(!a||!b)return 0;let i=0,u=0;for(let k=0;k<a.length;k++){if(
 const glyphCache={};
 function glyphGrid(ch){return glyphCache[ch]||(glyphCache[ch]=gridFromDraw(x=>{x.font="600 44px 'IBM Plex Sans JP','Noto Sans TC',sans-serif";x.textAlign='center';x.textBaseline='middle';x.fillStyle='#000';x.fillText(ch,32,34)}))}
 function userGrid(box){if(!box._strokes.length)return null;const k=64/box._size;return gridFromDraw(x=>{x.lineWidth=3;x.lineCap=x.lineJoin='round';x.strokeStyle='#000';box._strokes.forEach(s=>{x.beginPath();x.moveTo(s[0][0]*k,s[0][1]*k);s.forEach(p=>x.lineTo(p[0]*k,p[1]*k));x.stroke()})})}
+/* ===== 字形判定（骨架比對，並跟同筆畫數的其他假名比，要最像才算） ===== */
+/* 新的字形判定：骨架比對＋跟所有假名比排名 */
+const SN=32;
+function maskFrom(draw,W){const c=document.createElement('canvas');c.width=c.height=W;const x=c.getContext('2d');draw(x,W);const d=x.getImageData(0,0,W,W).data;const m=new Uint8Array(W*W);for(let i=0;i<W*W;i++)m[i]=d[i*4+3]>80?1:0;return m}
+function normMask(m,W){let x0=W,y0=W,x1=-1,y1=-1;for(let y=0;y<W;y++)for(let x=0;x<W;x++)if(m[y*W+x]){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+  if(x1<0)return null;const w=x1-x0+1,h=y1-y0+1,s=(SN-4)/Math.max(w,h),ox=(SN-w*s)/2,oy=(SN-h*s)/2;const g=new Uint8Array(SN*SN);
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(m[y*W+x]){g[Math.min(SN-1,Math.floor((y-y0)*s+oy))*SN+Math.min(SN-1,Math.floor((x-x0)*s+ox))]=1}return g}
+function thin(g){const N=SN,a=g.slice();let ch=true;const P=(x,y)=>(x<0||y<0||x>=N||y>=N)?0:a[y*N+x];
+  while(ch){ch=false;for(const step of [0,1]){const del=[];for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(!a[y*N+x])continue;const p2=P(x,y-1),p3=P(x+1,y-1),p4=P(x+1,y),p5=P(x+1,y+1),p6=P(x,y+1),p7=P(x-1,y+1),p8=P(x-1,y),p9=P(x-1,y-1);
+    const B=p2+p3+p4+p5+p6+p7+p8+p9;if(B<2||B>6)continue;const seq=[p2,p3,p4,p5,p6,p7,p8,p9,p2];let A=0;for(let k=0;k<8;k++)if(!seq[k]&&seq[k+1])A++;if(A!==1)continue;
+    if(step===0){if(p2*p4*p6||p4*p6*p8)continue}else{if(p2*p4*p8||p2*p6*p8)continue}del.push(y*N+x)}if(del.length){ch=true;del.forEach(i=>a[i]=0)}}}return a}
+function dil(g,r){const N=SN,o=new Uint8Array(N*N);for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(!g[y*N+x])continue;for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){const yy=y+dy,xx=x+dx;if(yy>=0&&xx>=0&&yy<N&&xx<N)o[yy*N+xx]=1}}return o}
+const cnt=g=>{let n=0;for(const v of g)n+=v;return n};
+function fscore(U,G){if(!U||!G)return 0;const Ud=dil(U,FR),Gd=dil(G,FR);let a=0,b=0;for(let i=0;i<U.length;i++){if(U[i]&&Gd[i])a++;if(G[i]&&Ud[i])b++}const p=a/Math.max(1,cnt(U)),r=b/Math.max(1,cnt(G));return p+r?2*p*r/(p+r):0}
+const KANA='あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん';
+const skelCache={};
+function skelFromCanvas(c){const W=c.width,d=c.getContext('2d').getImageData(0,0,W,W).data;let x0=W,y0=W,x1=-1,y1=-1;
+  for(let y=0;y<W;y++)for(let x=0;x<W;x++)if(d[(y*W+x)*4+3]>80){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+  if(x1<0)return null;const w=x1-x0+1,h=y1-y0+1,sc=(SN-4)/Math.max(w,h),o=document.createElement('canvas');o.width=o.height=SN;const ox=o.getContext('2d');ox.imageSmoothingEnabled=true;
+  ox.drawImage(c,x0,y0,w,h,(SN-w*sc)/2,(SN-h*sc)/2,w*sc,h*sc);const od=ox.getImageData(0,0,SN,SN).data,g=new Uint8Array(SN*SN);for(let i=0;i<SN*SN;i++)g[i]=od[i*4+3]>60?1:0;return thin(g)}
+function glyphSkel(ch){if(skelCache[ch])return skelCache[ch];const c=document.createElement('canvas');c.width=c.height=96;const x=c.getContext('2d');x.font="500 72px 'IBM Plex Sans JP','Hiragino Sans','Noto Sans CJK JP','Noto Sans TC',sans-serif";x.textAlign='center';x.textBaseline='middle';x.fillStyle='#000';x.fillText(ch,48,52);return skelCache[ch]=skelFromCanvas(c)}
+function strokesSkel(strokes,size){const W=192,k=W/size;const c=document.createElement('canvas');c.width=c.height=W;const x=c.getContext('2d');{x.lineWidth=W*.035;x.lineCap=x.lineJoin='round';x.strokeStyle='#000';strokes.forEach(s=>{x.beginPath();x.moveTo(s[0][0]*k,s[0][1]*k);s.forEach(p=>x.lineTo(p[0]*k,p[1]*k));if(s.length===1)x.lineTo(s[0][0]*k+.5,s[0][1]*k);x.stroke()})}return skelFromCanvas(c)}
+/* 判定：分數夠高，而且在所有假名裡排前 2 名（或跟第一名差很少） */
+function shapeCheck(strokes,size,base){const U=strokesSkel(strokes,size);if(!U)return {ok:false,f:0,rank:99};const f=fscore(U,glyphSkel(base));
+  let better=0,top=f;for(const k of KANA){if(k===base)continue;if(typeof STROKES!=='undefined'&&STROKES[k]!==STROKES[base])continue;const g=fscore(U,glyphSkel(k));if(g>f+0.02)better++;if(g>top)top=g}
+  return {ok:f>=SHAPE_MIN&&(better<RANK_OK||f>=top-TOP_GAP),f,rank:better+1}}
+let RANK_OK=1;
+let SHAPE_MIN=0.6,FR=2,TOP_GAP=0.05;
+
 /* 筆畫與濁點檢查 */
 const DAK='゙',HAN='゚';
 const ALT={き:[3,4],さ:[2,3],そ:[1,2],り:[1,2],ふ:[3,4]};
@@ -432,7 +461,7 @@ function analyze(box,ch){
   // 本體：去掉最後的濁點筆畫
   let bodyN=n;if(mN&&n>=Math.min(...needs)+mN)bodyN=n-mN;
   const body=bboxOf(infos.slice(0,bodyN));
-  const sim=iou(gridOf(S.slice(0,bodyN),box._size),glyphGrid(base));r.sim=sim;
+  const shp=shapeCheck(S.slice(0,bodyN),box._size,base);r.sim=shp.f;
   if(n>maxT){
     const t2=infos.slice(-2),t1=infos.slice(-1),b2=bboxOf(infos.slice(0,n-2)),b1=bboxOf(infos.slice(0,n-1));
     if(!mk&&n-2>0&&needs.includes(n-2)&&t2.every(t=>isMark(t,b2,'d')))r.reason='多了濁點，這個字沒有右上兩撇';
@@ -442,11 +471,11 @@ function analyze(box,ch){
   if(total.includes(n)){
     if(mN){const tail=infos.slice(n-mN);if(!tail.every(t=>isMark(t,body,mk))){
       const other=mk==='d'?'h':'d';r.reason=tail.every(t=>isMark(t,body,other))?(mk==='d'?'這裡要寫兩撇濁點，不是圈圈':'這裡要寫小圈圈，不是兩撇'):`${markName}要寫在右上角，而且是最後寫`;return r}}
-    if(sim>=.34){r.ok=true;return r}
-    r.reason='筆數對了，但字形不太像';return r}
+    if(shp.ok){r.ok=true;return r}
+    r.reason='筆數對了，但字形不夠像';return r}
   // 還沒寫完
   if(mk==='d'&&needs.includes(n-1)&&isMark(infos[n-1],bboxOf(infos.slice(0,n-1)),'h')){r.pending='這裡要寫兩撇濁點，不是圈圈';return r}
-  if(mN&&needs.includes(n)&&iou(gridOf(S,box._size),glyphGrid(base))>=.34)r.pending=`少了${markName}`;
+  if(mN&&needs.includes(n)&&shapeCheck(S,box._size,base).f>=SHAPE_MIN)r.pending=`少了${markName}`;
   return r}
 
 /* ===== 第一關 書道封印 ===== */
@@ -690,7 +719,7 @@ function verbNext(){vb.i++;if(vb.i>=vb.q.length){showResult({big:'化',title:'�
 function leaveVerb(){cancelAnimationFrame(vb.raf);go('s-home')}
 
 /* ===== 版本與重新整理（只在自架網站顯示） ===== */
-const APP_VER='2026.11.08b';
+const APP_VER='2026.11.08c';
 function hardReload(){toast('抓最新版中…');setTimeout(()=>{try{location.replace(location.pathname+'?v='+Date.now())}catch(e){location.reload()}},250)}
 if(/github\.io$/.test(location.hostname)){document.getElementById('reloadBtn').hidden=false;document.getElementById('verTag').textContent='　v'+APP_VER}
 /* ===== 啟動 ===== */
