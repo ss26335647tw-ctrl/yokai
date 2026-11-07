@@ -226,7 +226,7 @@ h1{margin:0;font-size:24px;line-height:1.15;text-wrap:balance}
 
 <!-- 第一關 先背起來 -->
 <section class="screen focus" id="s-study">
-  <div class="hud"><span>第一關・先背起來</span><span class="combo" id="st-left">40 秒</span></div>
+  <div class="hud"><span id="st-title">第一關・先背起來</span><span class="combo" id="st-left">40 秒</span></div>
   <div class="timer"><i id="stbar"></i></div>
   <p class="tag" style="text-align:center;margin:0 0 8px">時間到就開戰。點喇叭可以再聽一次。</p>
   <div class="list study" id="st-list"></div>
@@ -445,14 +445,18 @@ function analyze(box,ch){
 /* ===== 第一關 書道封印 ===== */
 const battle={list:[],i:0,ci:0,charTries:0,hp:3,combo:0,best:0,sealed:0,fled:[],locked:false,shooting:false,t0:0,dur:0,raf:0,box:null,word:null,y:null,autoT:0};
 const study={list:[],t0:0,dur:0,raf:0,idx:-1,PER:5000};
-function startBattle(){ac();study.list=pick(VOCAB,wKey,8);study.dur=study.list.length*study.PER;study.idx=-1;
-  document.getElementById('st-list').innerHTML=study.list.map((w,i)=>`<div class="gcard" id="st-${i}"><span class="k">${w.k}</span><button class="say" aria-label="唸 ${w.k}" onclick="say('${w.k}')"><svg><use href="#i-snd"/></svg></button><span class="m">${w.j}　${w.m}</span></div>`).join('');
-  go('s-study');study.t0=performance.now();cancelAnimationFrame(study.raf);stTick()}
+function openStudy(title,items,per,onStart){ac();Object.assign(study,{list:items,PER:per,dur:items.length*per,idx:-1,onStart});
+  document.getElementById('st-title').textContent=title;
+  document.getElementById('st-list').innerHTML=items.map((w,i)=>`<div class="gcard" id="st-${i}"><span class="k">${w.k}</span><button class="say" aria-label="唸出來" data-say="${w.say}"><svg><use href="#i-snd"/></svg></button><span class="m">${w.sub}</span></div>`).join('');
+  document.querySelectorAll('#st-list .say').forEach(b=>b.onclick=()=>say(b.dataset.say));
+  go('s-study');document.getElementById('st-list').scrollTop=0;study.t0=performance.now();cancelAnimationFrame(study.raf);stTick()}
+function startBattle(){const list=pick(VOCAB,wKey,8);openStudy('第一關・先背起來',list.map(w=>({k:w.k,sub:`${w.j}　${w.m}`,say:w.k})),5000,()=>beginBattle(shuffle(list)))}
+function startLava(){const list=pick(PHRASES,pKey,15);openStudy('第二關・先背起來',list.map(p=>({k:p.j,sub:`${p.r}　${p.m}`,say:p.r})),4000,()=>beginLava(list))}
 function stTick(){const el=performance.now()-study.t0,i=Math.min(study.list.length-1,Math.floor(el/study.PER));
-  if(i!==study.idx){if(study.idx>=0)document.getElementById('st-'+study.idx)?.classList.remove('now');study.idx=i;const c=document.getElementById('st-'+i);c.classList.add('now');try{c.scrollIntoView({block:'nearest',behavior:'smooth'})}catch(e){}say(study.list[i].k)}
+  if(i!==study.idx){if(study.idx>=0)document.getElementById('st-'+study.idx)?.classList.remove('now');study.idx=i;const c=document.getElementById('st-'+i);c.classList.add('now');try{c.scrollIntoView({block:'nearest',behavior:'smooth'})}catch(e){}say(study.list[i].say)}
   document.getElementById('st-left').textContent=Math.max(0,Math.ceil((study.dur-el)/1000))+' 秒';document.getElementById('stbar').style.transform=`scaleX(${Math.max(0,1-el/study.dur)})`;
   if(el>=study.dur){endStudy();return}study.raf=requestAnimationFrame(stTick)}
-function endStudy(){cancelAnimationFrame(study.raf);try{speechSynthesis.cancel()}catch(e){}beginBattle(shuffle(study.list))}
+function endStudy(){cancelAnimationFrame(study.raf);try{speechSynthesis.cancel()}catch(e){}study.onStart()}
 function leaveStudy(){cancelAnimationFrame(study.raf);try{speechSynthesis.cancel()}catch(e){}go('s-home')}
 function beginBattle(list){ac();Object.assign(battle,{list,i:0,hp:3,combo:0,best:0,sealed:0,fled:[],locked:false,shooting:false});go('s-battle');nextYokai()}
 function renderSlots(bad){const w=battle.word;document.getElementById('slots').innerHTML=[...w.k].map((ch,i)=>`<span class="slot ${i<battle.ci?'done':i===battle.ci?(bad?'cur bad':'cur'):''}">${i<battle.ci?ch:''}</span>`).join('')}
@@ -527,7 +531,7 @@ function endBattle(){cancelAnimationFrame(battle.raf);save();const dead=battle.h
 /* ===== 第二關 溶岩の試煉 ===== */
 const lv={queue:[],total:15,blocks:[],hp:3,gems:0,done:0,missed:[],sel:null,raf:0,last:0,spawnAcc:0,speed:34,combo:0,best:0,paused:false,over:false,H:0,lavaY:0};
 const GEM_SVG=`<svg viewBox="0 0 24 24"><path d="M6 4h12l4 6-10 11L2 10z" fill="#E8CD76" stroke="#B8862A" stroke-width="1.5" stroke-linejoin="round"/><path d="M2 10h20M9 4l3 6 3-6M12 10v11" stroke="#B8862A" stroke-width="1.2" fill="none"/></svg>`;
-function startLava(){ac();Object.assign(lv,{queue:pick(PHRASES,pKey,15),bag:[],blocks:[],hp:3,gems:0,done:0,missed:[],sel:null,spawnAcc:99,speed:28,combo:0,best:0,paused:false,over:false});lv.total=lv.queue.length;
+function beginLava(list){ac();Object.assign(lv,{queue:[...list],bag:[],blocks:[],hp:3,gems:0,done:0,missed:[],sel:null,spawnAcc:99,speed:28,combo:0,best:0,paused:false,over:false});lv.total=lv.queue.length;
   go('s-lava');const ar=document.getElementById('arena');ar.querySelectorAll('.blk').forEach(b=>b.remove());
   lavaStart();requestAnimationFrame(()=>{lv.H=ar.clientHeight;lv.lavaY=lv.H-document.getElementById('lavaEl').offsetHeight+6;lvHud();lv.last=performance.now();cancelAnimationFrame(lv.raf);lv.raf=requestAnimationFrame(lvLoop)});
   document.getElementById('l-pause').textContent='待って（暫停）';const fb=document.getElementById('l-fb');fb.className='feedback';
