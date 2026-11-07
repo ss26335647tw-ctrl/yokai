@@ -6,7 +6,7 @@
 :root{
   --bg:#161311;--panel:#1F1B18;--panel2:#262119;--ink:#F2ECE4;--dim:#B3A797;--line:#3A322B;
   --accent:#E06A55;--seal:#E06A55;--soft:#3A231E;--navy:#8FA8E0;--ok:#4FA37A;--sakura:#D9738C;--gold:#D4A54A;
-  --paper:#E8CD76;--paper2:#D9B85A;--paperInk:#B8291E;--lava:#FF6A2B;--lava2:#B3200F;
+  --paper:#F4EFE3;--paper2:#E6DDC8;--paperInk:#1E1A17;--shu:#C8402F;--lava:#FF6A2B;--lava2:#B3200F;
   --grad:linear-gradient(120deg,#E8784F 0%,#DD5A45 45%,#C8402F 100%);
   --fs:"IBM Plex Sans JP","Noto Sans TC",system-ui,sans-serif;
   --fm:"IBM Plex Mono",ui-monospace,monospace;
@@ -94,16 +94,17 @@ h1{margin:0;font-size:24px;line-height:1.15;text-wrap:balance}
 .strk b.ok{color:var(--ok)}.strk b.over{color:var(--sakura)}
 .box.good{border-color:var(--gold);border-style:solid;box-shadow:0 0 0 3px rgba(212,165,74,.5),0 0 30px rgba(212,165,74,.7)}
 .inkfly{position:fixed;left:0;top:0;z-index:20;pointer-events:none;filter:drop-shadow(0 0 8px rgba(232,205,118,.95)) drop-shadow(0 0 18px rgba(224,106,85,.8))}
-.fu{margin:8px auto 6px;padding:12px 10px;background:linear-gradient(180deg,var(--paper),var(--paper2));border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.45),inset 0 0 0 2px rgba(184,41,30,.55),inset 0 0 0 6px var(--paper);display:flex;gap:6px;justify-content:center;align-items:center;width:max-content;max-width:100%;flex:0 0 auto}
-.fu .head,.fu .foot{font-family:var(--fb);color:var(--paperInk);font-size:14px;writing-mode:vertical-rl;line-height:1}
-.box{position:relative;border:1.5px dashed rgba(184,41,30,.55);border-radius:4px;background:rgba(255,255,255,.18);touch-action:none}
+.fu{margin:8px auto 6px;padding:12px 10px;background:linear-gradient(180deg,var(--paper),var(--paper2));border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.45),inset 0 0 0 1.5px rgba(30,26,23,.55),inset 0 0 0 6px var(--paper);display:flex;gap:6px;justify-content:center;align-items:center;width:max-content;max-width:100%;flex:0 0 auto}
+.fu .head,.fu .foot{font-family:var(--fb);color:var(--paperInk);font-size:15px;writing-mode:vertical-rl;line-height:1.05;display:flex;align-items:center;gap:8px}
+.fu .foot::after{content:"封";writing-mode:horizontal-tb;display:grid;place-items:center;width:22px;height:22px;border:1.5px solid var(--shu);border-radius:3px;color:var(--shu);font-size:14px;transform:rotate(-4deg);mix-blend-mode:multiply}
+.box{position:relative;border:1.5px dashed rgba(30,26,23,.3);border-radius:4px;background:rgba(255,255,255,.35);touch-action:none}
 .box canvas{display:block;width:100%;height:100%}
 .box .ghost{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--fb);color:var(--paperInk);opacity:.28;pointer-events:none;line-height:1}
-.box .x{position:absolute;right:6px;top:6px;width:32px;height:32px;min-height:0;border-radius:50%;background:rgba(184,41,30,.85);color:#fff;font-size:16px;line-height:32px;padding:0;display:none}
+.box .x{position:absolute;right:6px;top:6px;width:32px;height:32px;min-height:0;border-radius:50%;background:rgba(30,26,23,.75);color:#fff;font-size:16px;line-height:32px;padding:0;display:none}
 .box.has .x{display:block}
 .box.bad{border-color:#C8402F;background:rgba(200,64,47,.25);animation:shake .4s}
 @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
-.fly{position:fixed;left:0;top:0;z-index:20;font-family:var(--fb);color:var(--paperInk);line-height:1;pointer-events:none;text-shadow:0 0 10px rgba(232,205,118,.95),0 0 24px rgba(224,106,85,.7)}
+.fly{position:fixed;left:0;top:0;z-index:20;font-family:var(--fb);color:var(--paper);line-height:1;pointer-events:none;text-shadow:0 0 10px rgba(232,205,118,.95),0 0 24px rgba(224,106,85,.7)}
 .feedback{text-align:center;min-height:1.5em;font-size:16px;color:var(--dim);margin:0 0 6px;flex:0 0 auto}
 .feedback.ok{color:var(--ok)}.feedback.no{color:var(--sakura)}
 .feedback .ans{font-size:22px;color:var(--ink);font-weight:700}
@@ -223,7 +224,7 @@ h1{margin:0;font-size:24px;line-height:1.15;text-wrap:balance}
   <div class="hint" id="p-hint"></div>
   <div class="slots" id="slots"></div>
   <div class="strk" id="strk"></div>
-  <div class="fu"><span class="head">勅令</span><div id="boxes"></div><span class="foot">急急如律令</span></div>
+  <div class="fu"><span class="head">御札</span><div id="boxes"></div><span class="foot">悪霊退散</span></div>
   <div class="feedback" id="fb">　</div>
   <div class="actions">
     <button class="btn sm" onclick="leaveBattle()">にげる（逃跑）</button>
@@ -399,7 +400,7 @@ function makeBox(size,ch,onStroke){
   const c=document.createElement('canvas');c.width=c.height=Math.round(size*DPR);box.appendChild(c);
   const g=document.createElement('div');g.className='ghost';g.style.fontSize=(size*.72)+'px';g.textContent=ch;g.hidden=true;box.appendChild(g);
   const x=document.createElement('button');x.className='x';x.textContent='×';x.setAttribute('aria-label','清掉重寫');x.onclick=()=>clearBox(box);box.appendChild(x);
-  const ctx=c.getContext('2d');ctx.scale(DPR,DPR);ctx.lineCap=ctx.lineJoin='round';ctx.strokeStyle='#B8291E';ctx.lineWidth=Math.max(6,size*.045);
+  const ctx=c.getContext('2d');ctx.scale(DPR,DPR);ctx.lineCap=ctx.lineJoin='round';ctx.strokeStyle='#1E1A17';ctx.lineWidth=Math.max(6,size*.045);
   box._strokes=[];box._drawing=false;let cur=null;
   const pos=e=>{const r=c.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
   c.addEventListener('pointerdown',e=>{if(battle.locked||battle.shooting)return;ac();box._onStart&&box._onStart();c.setPointerCapture(e.pointerId);box._drawing=true;cur=[pos(e)];ctx.beginPath();ctx.moveTo(...cur[0]);ctx.lineTo(cur[0][0]+.1,cur[0][1]);ctx.stroke()});
@@ -557,7 +558,7 @@ function judge(){clearTimeout(battle.autoT);if(battle.locked||battle.shooting)re
 /* 寫對：符紙上的字先發光停一下，再帶著你的筆跡往上飛 */
 function hitChar(){if(battle.locked||battle.shooting)return;const w=battle.word,ch=w.k[battle.ci],box=battle.box;battle.shooting=true;
   battle.ci++;battle.charTries=0;const final=battle.ci>=w.k.length;
-  box.classList.add('good');SFX.pick();const fb=document.getElementById('fb');fb.className='feedback ok';fb.textContent=`「${ch}」——急急如律令！`;renderSlots();
+  box.classList.add('good');SFX.pick();const fb=document.getElementById('fb');fb.className='feedback ok';fb.textContent=`「${ch}」——悪霊退散！`;renderSlots();
   const r=box.getBoundingClientRect(),cv=box.querySelector('canvas');let url='';try{url=cv.toDataURL()}catch(e){}
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   setTimeout(()=>{
@@ -760,7 +761,7 @@ function verbNext(){vb.i++;if(vb.i>=vb.q.length){showResult({big:'化',title:'�
 function leaveVerb(){cancelAnimationFrame(vb.raf);go('s-home')}
 
 /* ===== 版本與重新整理（只在自架網站顯示） ===== */
-const APP_VER='2026.11.08k';
+const APP_VER='2026.11.08l';
 function hardReload(){toast('抓最新版中…');setTimeout(()=>{try{location.replace(location.pathname+'?v='+Date.now())}catch(e){location.reload()}},250)}
 if(/github\.io$/.test(location.hostname)){document.getElementById('reloadBtn').hidden=false;document.getElementById('verTag').textContent='　v'+APP_VER}
 /* ===== 啟動 ===== */
