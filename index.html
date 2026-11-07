@@ -231,6 +231,7 @@ h1{margin:0;font-size:24px;line-height:1.15;text-wrap:balance}
   <div class="hud"><span id="st-title">第一關・先背起來</span><span class="combo" id="st-left">40 秒</span></div>
   <div class="timer"><i id="stbar"></i></div>
   <p class="tag" style="text-align:center;margin:0 0 8px">時間到就開戰。點喇叭可以再聽一次。</p>
+  <div style="display:flex;justify-content:center;margin:0 0 10px" id="st-opt" hidden><button class="pill" id="st-ruby" onclick="toggleRuby()" style="min-height:40px;font-size:15px"></button></div>
   <div class="list study" id="st-list"></div>
   <div class="actions" style="margin-top:12px"><button class="btn sm" onclick="leaveStudy()">帰る（回去）</button><button class="btn main" onclick="endStudy()">覚えた！（開始）</button></div>
 </section>
@@ -447,14 +448,16 @@ function analyze(box,ch){
 /* ===== 第一關 書道封印 ===== */
 const battle={list:[],i:0,ci:0,charTries:0,hp:3,combo:0,best:0,sealed:0,fled:[],locked:false,shooting:false,t0:0,dur:0,raf:0,box:null,word:null,y:null,autoT:0};
 const study={list:[],t0:0,dur:0,raf:0,idx:-1,PER:5000};
-function openStudy(title,items,per,onStart,timed){ac();Object.assign(study,{list:items,PER:per,dur:items.length*per,idx:-1,onStart,timed:!!timed});
-  document.querySelector('#s-study .tag').textContent=timed?'時間到就開戰。點喇叭可以再聽一次。':'不限時，會一直輪流唸。背好了再按開始，接著先描字練習。';
+function paintRuby(){document.getElementById('st-ruby').innerHTML=`日文方塊的讀音：<b>${META.ruby===false?'不顯示':'顯示'}</b>`}
+function toggleRuby(){META.ruby=META.ruby===false;save();paintRuby()}
+function openStudy(title,items,per,onStart,timed,opts){ac();document.getElementById('st-opt').hidden=!(opts&&opts.ruby);paintRuby();Object.assign(study,{list:items,PER:per,dur:items.length*per,idx:-1,onStart,timed:!!timed});
+  document.querySelector('#s-study .tag').textContent=timed?'時間到就開戰。點喇叭可以再聽一次。':(opts&&opts.ruby?'不限時，會一直輪流唸。背好了再按開始。':'不限時，會一直輪流唸。背好了再按開始，接著先描字練習。');
   document.getElementById('st-title').textContent=title;
   document.getElementById('st-list').innerHTML=items.map((w,i)=>`<div class="gcard" id="st-${i}"><span class="k">${w.k}</span><button class="say" aria-label="唸出來" data-say="${w.say}"><svg><use href="#i-snd"/></svg></button><span class="m">${w.sub}</span></div>`).join('');
   document.querySelectorAll('#st-list .say').forEach(b=>b.onclick=()=>say(b.dataset.say));
   go('s-study');document.getElementById('st-list').scrollTop=0;study.t0=performance.now();cancelAnimationFrame(study.raf);stTick()}
 function startBattle(prev){const list=prev&&prev.length?prev:pick(VOCAB,wKey,5);openStudy('第一關・認識新字',list.map(w=>({k:w.k,sub:`${w.j}　${w.m}`,say:w.k})),4000,()=>beginBattle(shuffle(list),true),false)}
-function startLava(prev){const list=prev&&prev.length?prev:pick(PHRASES,pKey,10);openStudy('第二關・認識片語',list.map(p=>({k:p.j,sub:`${p.r}　${p.m}`,say:p.r})),4000,()=>beginLava(list,true),false)}
+function startLava(prev){const list=prev&&prev.length?prev:pick(PHRASES,pKey,10);openStudy('第二關・認識片語',list.map(p=>({k:p.j,sub:`${p.r}　${p.m}`,say:p.r})),4000,()=>beginLava(list,false),false,{ruby:true})}
 function stTick(){const el=performance.now()-study.t0,n=study.list.length,i=study.timed?Math.min(n-1,Math.floor(el/study.PER)):Math.floor(el/study.PER)%n;
   if(i!==study.idx){if(study.idx>=0)document.getElementById('st-'+study.idx)?.classList.remove('now');study.idx=i;const c=document.getElementById('st-'+i);c.classList.add('now');try{c.scrollIntoView({block:'nearest',behavior:'smooth'})}catch(e){}say(study.list[i].say)}
   if(study.timed){document.getElementById('st-left').textContent=Math.max(0,Math.ceil((study.dur-el)/1000))+' 秒';document.getElementById('stbar').style.transform=`scaleX(${Math.max(0,1-el/study.dur)})`;if(el>=study.dur){endStudy();return}}
@@ -542,12 +545,12 @@ function beginLava(list,practice){ac();Object.assign(lv,{list,practice:!!practic
   go('s-lava');const ar=document.getElementById('arena');ar.querySelectorAll('.blk').forEach(b=>b.remove());
   lavaStart();requestAnimationFrame(()=>{lv.H=ar.clientHeight;lv.lavaY=lv.H-document.getElementById('lavaEl').offsetHeight+6;lv.base=Math.max(14,lv.lavaY/30);lv.speed=lv.base*(lv.practice?.85:1);lvHud();lv.last=performance.now();cancelAnimationFrame(lv.raf);lv.raf=requestAnimationFrame(lvLoop)});
   document.getElementById('l-pause').textContent='待って（暫停）';const fb=document.getElementById('l-fb');fb.className='feedback';
-  const pre=lv.practice?'練習輪・附讀音・不扣命　':'';
+  const pre='';
   if(voiceStart()){fb.textContent=pre+'先說日文，再說中文';setTimeout(()=>{if(vc.on)lavaVol(.1)},1400)}else fb.textContent=pre+'點日文，再點中文'}
-function lvHud(){document.getElementById('l-hp').innerHTML=hearts(lv.hp);document.getElementById('l-count').textContent=`${lv.practice?'練習':'正式'} ${lv.done} / ${lv.total}`;document.getElementById('l-gems').lastChild.textContent=' '+lv.gems}
+function lvHud(){document.getElementById('l-hp').innerHTML=hearts(lv.hp);document.getElementById('l-count').textContent=`${lv.done} / ${lv.total}`;document.getElementById('l-gems').lastChild.textContent=' '+lv.gems}
 const LANES=['2%','34.5%','67%'];
 function mkBlock(p,type,lane,y,v){const ar=document.getElementById('arena');const el=document.createElement('button');el.className='blk '+type;
-  el.innerHTML=`<span class="lb">${type==='zh'?'中文':'日本語'}</span>${type==='zh'?p.m:p.j}${type==='ja'&&lv.practice?`<span class="lb" style="margin:2px 0 0;letter-spacing:0;font-family:var(--fs);font-size:11px">${p.r}</span>`:''}`;const b={p,type,lane,y,el,alive:true,v:v||1};
+  el.innerHTML=`<span class="lb">${type==='zh'?'中文':'日本語'}</span>${type==='zh'?p.m:p.j}${type==='ja'&&META.ruby!==false?`<span class="lb" style="margin:2px 0 0;letter-spacing:0;font-family:var(--fs);font-size:11px">${p.r}</span>`:''}`;const b={p,type,lane,y,el,alive:true,v:v||1};
   el.style.left=LANES[lane];el.style.transform=`translateY(${y}px)`;el.onclick=()=>tapBlock(b);ar.appendChild(el);lv.blocks.push(b);return b}
 /* 同一組的中文和日文接著掉、速度一樣，所以會在附近；組跟組之間的速度不同 */
 function refillBag(){const n=Math.min(3,lv.queue.length);for(let i=0;i<n;i++){const p=lv.queue.shift(),v=.65+Math.random()*.85,pair=shuffle([{p,type:'zh',v},{p,type:'ja',v}]);lv.bag.push(...pair)}}
