@@ -428,18 +428,28 @@ function thin(g){const N=SN,a=g.slice();let ch=true;const P=(x,y)=>(x<0||y<0||x>
     if(step===0){if(p2*p4*p6||p4*p6*p8)continue}else{if(p2*p4*p8||p2*p6*p8)continue}del.push(y*N+x)}if(del.length){ch=true;del.forEach(i=>a[i]=0)}}}return a}
 function dil(g,r){const N=SN,o=new Uint8Array(N*N);for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(!g[y*N+x])continue;for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){const yy=y+dy,xx=x+dx;if(yy>=0&&xx>=0&&yy<N&&xx<N)o[yy*N+xx]=1}}return o}
 const cnt=g=>{let n=0;for(const v of g)n+=v;return n};
-function fscore(U,G){if(!U||!G)return 0;const Ud=dil(U,FR),Gd=dil(G,FR);let a=0,b=0;for(let i=0;i<U.length;i++){if(U[i]&&Gd[i])a++;if(G[i]&&Ud[i])b++}const p=a/Math.max(1,cnt(U)),r=b/Math.max(1,cnt(G));return p+r?2*p*r/(p+r):0}
+function fscore(U,G){if(!U||!G)return 0;const Ud=dil(U,FR),Gd=dil(G,FR);let a=0,b=0;for(let i=0;i<U.length;i++){if(U[i]&&Gd[i])a++;if(G[i]&&Ud[i])b++}const p=a/Math.max(1,cnt(U)),r=b/Math.max(1,cnt(G));return p+r?(1+B2)*p*r/(B2*p+r):0}
+let B2=2;
 const KANA='あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん';
 const skelCache={};
-function skelFromCanvas(c){const W=c.width,d=c.getContext('2d').getImageData(0,0,W,W).data;let x0=W,y0=W,x1=-1,y1=-1;
-  for(let y=0;y<W;y++)for(let x=0;x<W;x++)if(d[(y*W+x)*4+3]>80){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
-  if(x1<0)return null;const w=x1-x0+1,h=y1-y0+1,sc=(SN-4)/Math.max(w,h),o=document.createElement('canvas');o.width=o.height=SN;const ox=o.getContext('2d');ox.imageSmoothingEnabled=true;
-  ox.drawImage(c,x0,y0,w,h,(SN-w*sc)/2,(SN-h*sc)/2,w*sc,h*sc);const od=ox.getImageData(0,0,SN,SN).data,g=new Uint8Array(SN*SN);for(let i=0;i<SN*SN;i++)g[i]=od[i*4+3]>60?1:0;return thin(g)}
-function glyphSkel(ch){if(skelCache[ch])return skelCache[ch];const c=document.createElement('canvas');c.width=c.height=96;const x=c.getContext('2d');x.font="500 72px 'IBM Plex Sans JP','Hiragino Sans','Noto Sans CJK JP','Noto Sans TC',sans-serif";x.textAlign='center';x.textBaseline='middle';x.fillStyle='#000';x.fillText(ch,48,52);return skelCache[ch]=skelFromCanvas(c)}
-function strokesSkel(strokes,size){const W=192,k=W/size;const c=document.createElement('canvas');c.width=c.height=W;const x=c.getContext('2d');{x.lineWidth=W*.035;x.lineCap=x.lineJoin='round';x.strokeStyle='#000';strokes.forEach(s=>{x.beginPath();x.moveTo(s[0][0]*k,s[0][1]*k);s.forEach(p=>x.lineTo(p[0]*k,p[1]*k));if(s.length===1)x.lineTo(s[0][0]*k+.5,s[0][1]*k);x.stroke()})}return skelFromCanvas(c)}
-/* 判定：分數夠高，而且在所有假名裡排前 2 名（或跟第一名差很少） */
-function shapeCheck(strokes,size,base){const U=strokesSkel(strokes,size);if(!U)return {ok:false,f:0,rank:99};const f=fscore(U,glyphSkel(base));
-  let better=0,top=f;for(const k of KANA){if(k===base)continue;if(typeof STROKES!=='undefined'&&STROKES[k]!==STROKES[base])continue;const g=fscore(U,glyphSkel(k));if(g>f+0.02)better++;if(g>top)top=g}
+/* mode 0：等比例縮放；mode 1：長寬各自拉滿（筆畫拉太長、比例跑掉也認得出來） */
+/* 範圍用「大部分筆畫」決定（去掉最外圍 TRIM 比例），拉太長的尾巴不會把整個字縮小 */
+let TRIM=0.04;
+function skelFromCanvas(c,mode){const W=c.width,d=c.getContext('2d').getImageData(0,0,W,W).data;const xs=[],ys=[];
+  for(let y=0;y<W;y++)for(let x=0;x<W;x++)if(d[(y*W+x)*4+3]>80){xs.push(x);ys.push(y)}
+  if(!xs.length)return null;xs.sort((a,b)=>a-b);ys.sort((a,b)=>a-b);const q=(arr,t)=>arr[Math.min(arr.length-1,Math.max(0,Math.floor(arr.length*t)))];
+  let x0=q(xs,TRIM),x1=q(xs,1-TRIM),y0=q(ys,TRIM),y1=q(ys,1-TRIM);if(x1-x0<4){x0=xs[0];x1=xs[xs.length-1]}if(y1-y0<4){y0=ys[0];y1=ys[ys.length-1]}const w=x1-x0+1,h=y1-y0+1,o=document.createElement('canvas');o.width=o.height=SN;const ox=o.getContext('2d');ox.imageSmoothingEnabled=true;
+  if(mode){const sx=(SN-4)/w,sy=(SN-4)/h,m=Math.min(sx,sy)*2.2,ax=Math.min(sx,m),ay=Math.min(sy,m);ox.drawImage(c,x0,y0,w,h,(SN-w*ax)/2,(SN-h*ay)/2,w*ax,h*ay)}
+  else{const sc=(SN-4)/Math.max(w,h);ox.drawImage(c,x0,y0,w,h,(SN-w*sc)/2,(SN-h*sc)/2,w*sc,h*sc)}
+  const od=ox.getImageData(0,0,SN,SN).data,g=new Uint8Array(SN*SN);for(let i=0;i<SN*SN;i++)g[i]=od[i*4+3]>60?1:0;return thin(g)}
+function glyphCanvas(ch){const c=document.createElement('canvas');c.width=c.height=96;const x=c.getContext('2d');x.font="500 72px 'IBM Plex Sans JP','Hiragino Sans','Noto Sans CJK JP','Noto Sans TC',sans-serif";x.textAlign='center';x.textBaseline='middle';x.fillStyle='#000';x.fillText(ch,48,52);return c}
+function glyphSkel(ch,mode=0){const key=ch+mode;if(skelCache[key])return skelCache[key];return skelCache[key]=skelFromCanvas(glyphCanvas(ch),mode)}
+function strokesCanvas(strokes,size){const W=192,k=W/size;const c=document.createElement('canvas');c.width=c.height=W;const x=c.getContext('2d');x.lineWidth=W*.035;x.lineCap=x.lineJoin='round';x.strokeStyle='#000';strokes.forEach(s=>{x.beginPath();x.moveTo(s[0][0]*k,s[0][1]*k);s.forEach(p=>x.lineTo(p[0]*k,p[1]*k));if(s.length===1)x.lineTo(s[0][0]*k+.5,s[0][1]*k);x.stroke()});return c}
+function strokesSkel(strokes,size,mode=0){return skelFromCanvas(strokesCanvas(strokes,size),mode)}
+/* 判定：兩種比對方式取較高分；要比同筆畫數的其他假名都像 */
+function shapeCheck(strokes,size,base){const c=strokesCanvas(strokes,size),U=[skelFromCanvas(c,0),skelFromCanvas(c,1)];if(!U[0])return {ok:false,f:0,rank:99};
+  const score=k=>Math.max(fscore(U[0],glyphSkel(k,0)),fscore(U[1],glyphSkel(k,1)));const f=score(base);
+  let better=0,top=f;for(const k of KANA){if(k===base)continue;if(typeof STROKES!=='undefined'&&STROKES[k]!==STROKES[base])continue;const g=score(k);if(g>f+0.02)better++;if(g>top)top=g}
   return {ok:f>=SHAPE_MIN&&(better<RANK_OK||f>=top-TOP_GAP),f,rank:better+1}}
 let RANK_OK=1;
 let SHAPE_MIN=0.6,FR=2,TOP_GAP=0.05;
@@ -727,7 +737,7 @@ function verbNext(){vb.i++;if(vb.i>=vb.q.length){showResult({big:'化',title:'�
 function leaveVerb(){cancelAnimationFrame(vb.raf);go('s-home')}
 
 /* ===== 版本與重新整理（只在自架網站顯示） ===== */
-const APP_VER='2026.11.08g';
+const APP_VER='2026.11.08h';
 function hardReload(){toast('抓最新版中…');setTimeout(()=>{try{location.replace(location.pathname+'?v='+Date.now())}catch(e){location.reload()}},250)}
 if(/github\.io$/.test(location.hostname)){document.getElementById('reloadBtn').hidden=false;document.getElementById('verTag').textContent='　v'+APP_VER}
 /* ===== 啟動 ===== */
